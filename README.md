@@ -1,5 +1,9 @@
 # kees - Kubernetes External Environment Secrets
 
+[![Build Status](https://travis-ci.org/bsycorp/kees.svg?branch=master)](https://travis-ci.org/bsycorp/kees)
+
+https://hub.docker.com/r/bsycorp/kees/
+
 In our current draft of Kubernetes Secret Management, we have three components: Init Container, Creator and Exporter.
 
 The functionalities of each component are outlined as following:
