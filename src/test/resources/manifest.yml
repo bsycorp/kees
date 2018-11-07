@@ -1,0 +1,96 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: service-c
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        run: service-c
+      annotations:
+        init.bsycorp.com/local-mode: "true"
+        init.bsycorp.com/storage-prefix: "local"
+        secret.bsycorp.com/service-c.api-key: "kind=DYNAMIC,type=RANDOM,size=128"
+        secret.bsycorp.com/service-t.signing.v1_public: "kind=DYNAMIC,type=RSA,size=2048"
+        secret.bsycorp.com/common.key.v1_public: "kind=DYNAMIC,type=RSA,size=2048"
+        secret.bsycorp.com/common.key.v1_private: "kind=DYNAMIC,type=RSA,size=2048"
+        secret.bsycorp.com/common.thing: "kind=DYNAMIC,type=RANDOM,size=288"
+        secret.bsycorp.com/app.db: "kind=REFERENCE,type=PASSWORD,localModeValue=cGFzc3dvcmQ="
+        secret.bsycorp.com/service-c.api-key: "kind=DYNAMIC,type=RANDOM,size=128"
+        secret.bsycorp.com/service-c-i.api-key: "kind=DYNAMIC,type=RANDOM,size=128"
+        secret.bsycorp.com/service-c-n.api-key: "kind=DYNAMIC,type=RANDOM,size=128"
+        secret.bsycorp.com/service-a.api-key: "kind=DYNAMIC,type=RANDOM,size=128"
+        secret.bsycorp.com/service-p.api-key: "kind=DYNAMIC,type=RANDOM,size=128"
+        secret.bsycorp.com/service-n.api-key: "kind=DYNAMIC,type=RANDOM,size=128"
+        secret.bsycorp.com/service-t.api-key: "kind=DYNAMIC,type=RANDOM,size=128"
+        secret.bsycorp.com/service-c-i.signing.v1_public: "kind=DYNAMIC,type=RSA,size=2048"
+        resource.bsycorp.com/app.db.main.url: "storageKey=identity-db.url,localModeValue=dmFsdWU="
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: service-c
+        image: bsycorp/service-c:latest
+        lifecycle:
+        ports:
+        - containerPort: 8080
+        env:
+        - name: KUBERNETES
+          value: "true"
+        - name: KUBERNETES_SECRETS_PATH
+          value: "/bsycorp-init/secrets.properties"
+        resources:
+          limits:
+            cpu: 1
+            memory: 768Mi
+          requests:
+            cpu: 50m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 300
+          failureThreshold: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          failureThreshold: 10
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /bsycorp-init
+          name: init-volume
+      initContainers:
+      - name: bsycorp-init
+        image: bsycorp/kubernetes-secret/init:latest
+        volumeMounts:
+        - mountPath: /podinfo
+          name: podinfo-volume
+        - mountPath: /bsycorp-init
+          name: init-volume
+      volumes:
+      - name: init-volume
+        emptyDir: {}
+      - name: podinfo-volume
+        downwardAPI:
+          items:
+            - path: "annotations"
+              fieldRef:
+                fieldPath: metadata.annotations
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-c
+  labels:
+    name: service-c
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    run: service-c

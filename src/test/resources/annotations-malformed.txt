@@ -1,0 +1,7 @@
+init.bsycorp.com/local-mode="true"
+init.bsycorp.com/storage-prefix="local"
+kubernetes.io/config.seen="2018-03-13T06:16:19.2805278Z"
+kubernetes.io/config.source="api"
+secret.bsycorp.com/common.test="kind=BLAh,type=RANDOM,size=288"
+secret.bsycorp.com/common.thing.v1_private`
+junk

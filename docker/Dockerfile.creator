@@ -1,0 +1,3 @@
+FROM bitnami/java:1.8-prod
+ADD build/libs/kubernetes-secret-all.jar /app.jar
+CMD ["java", "-cp", "/app.jar", "com.bsycorp.kees.CreateMain"]
