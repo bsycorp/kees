@@ -8,9 +8,6 @@ import com.github.jknack.handlebars.Handlebars;
 import com.github.jknack.handlebars.Helper;
 import com.github.jknack.handlebars.Template;
 import com.github.jknack.handlebars.io.StringTemplateSource;
-import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.charset.Charset;
@@ -18,6 +15,9 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ExportMain {
 
@@ -57,7 +57,7 @@ public class ExportMain {
                 outputTerraform
         );
 
-        String terraformResource = generateResourceForFile(inputModuleName, inputManifest);
+        String terraformResource = generateResourceForFile(inputModuleName, inputManifest, exportTemplate);
 
         if (outputTerraform == null) {
             LOG.info("Writing output to stdout: \n---\n {}\n---", terraformResource);
@@ -68,7 +68,7 @@ public class ExportMain {
         LOG.info("Done");
     }
 
-    public String generateResourceForFile(String moduleName, File inputFile) throws Exception {
+    public static String generateResourceForFile(String moduleName, File inputFile, File exportTemplate) throws Exception {
         LOG.info("Parsing YAML to extract module name and annotations..");
         List<Parameter> parameters = annotationParser.parseYamlFile(inputFile);
         LOG.info("Constructed {} parameters from YAML.", parameters.size());
