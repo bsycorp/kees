@@ -1,6 +1,5 @@
 package com.bsycorp.kees;
 
-import com.bsycorp.kees.storage.DynamoDBStorageProvider;
 import com.bsycorp.kees.data.DataProvider;
 import com.bsycorp.kees.data.RandomDataProvider;
 import com.bsycorp.kees.models.Parameter;
@@ -8,21 +7,22 @@ import com.bsycorp.kees.models.ResourceParameter;
 import com.bsycorp.kees.models.SecretKindEnum;
 import com.bsycorp.kees.models.SecretParameter;
 import com.bsycorp.kees.models.SecretTypeEnum;
+import com.bsycorp.kees.storage.DynamoDBStorageProvider;
 import com.bsycorp.kees.storage.StorageProvider;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watcher;
-import org.apache.commons.collections4.map.PassiveExpiringMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.commons.collections4.map.PassiveExpiringMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static com.bsycorp.kees.Utils.getAnnotationDomain;
 
@@ -43,13 +43,13 @@ public class CreateMain {
     public static void main(String... argv) throws Exception {
         CreateMain main = new CreateMain();
 
-        String envLabel = System.getenv("ENV_LABEL");
+        String envLabel = Utils.getEnvironment().get("ENV_LABEL");
         if (envLabel == null) {
             throw new Exception("ENV_LABEL is required");
         }
 
         try {
-            main.setStorageProvider(new DynamoDBStorageProvider(Utils.getTableName(System.getenv("ENV_LABEL"))));
+            main.setStorageProvider(new DynamoDBStorageProvider(Utils.getTableName(Utils.getEnvironment().get("ENV_LABEL"))));
             main.run();
         } catch (Exception e) {
             LOG.error("Error in execution", e);

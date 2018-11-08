@@ -6,6 +6,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClientBuilder;
 
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,12 +15,13 @@ public class Utils {
     private static final Logger LOG = LoggerFactory.getLogger(Utils.class);
 
     public static final String HTTPS_PROXY = "https_proxy";
+    public static Map<String, String> environment = System.getenv();
 
     public static AWSSimpleSystemsManagement getSSMClient() {
         String proxyConfig = System.getProperty(HTTPS_PROXY);
         ClientConfiguration clientConfiguration = new ClientConfiguration();
         if (proxyConfig == null) {
-            proxyConfig = System.getenv(HTTPS_PROXY);
+            proxyConfig = getEnvironment().get(HTTPS_PROXY);
         }
 
         if (proxyConfig != null) {
@@ -36,7 +38,7 @@ public class Utils {
         String proxyConfig = System.getProperty(HTTPS_PROXY);
         ClientConfiguration clientConfiguration = new ClientConfiguration();
         if (proxyConfig == null) {
-            proxyConfig = System.getenv(HTTPS_PROXY);
+            proxyConfig = getEnvironment().get(HTTPS_PROXY);
         }
 
         if (proxyConfig != null) {
@@ -54,7 +56,7 @@ public class Utils {
     }
 
     public static String getAnnotationDomain() {
-        String value = System.getenv("ANNOTATION_DOMAIN");
+        String value = getEnvironment().get("ANNOTATION_DOMAIN");
         if (value == null) {
             value = "bsycorp.com";
         }
@@ -62,11 +64,19 @@ public class Utils {
     }
 
     public static String getCloudRegion(){
-        String value = System.getenv("AWS_REGION");
+        String value = getEnvironment().get("AWS_REGION");
         if (value == null) {
             value = "ap-southeast-2";
         }
         return value;
+    }
+
+    public static void setEnvironment(Map<String, String> overrideEnvironment){
+        environment = overrideEnvironment;
+    }
+
+    public static Map<String, String> getEnvironment(){
+        return environment;
     }
 
 }

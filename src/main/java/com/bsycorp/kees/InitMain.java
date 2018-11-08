@@ -1,14 +1,11 @@
 package com.bsycorp.kees;
 
-import com.bsycorp.kees.storage.DynamoDBStorageProvider;
-import com.bsycorp.kees.storage.LocalStorageProvider;
 import com.bsycorp.kees.models.Parameter;
 import com.bsycorp.kees.models.ResourceParameter;
 import com.bsycorp.kees.models.SecretParameter;
+import com.bsycorp.kees.storage.DynamoDBStorageProvider;
+import com.bsycorp.kees.storage.LocalStorageProvider;
 import com.bsycorp.kees.storage.StorageProvider;
-import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -18,6 +15,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static com.bsycorp.kees.Utils.getAnnotationDomain;
 
@@ -40,7 +40,7 @@ public class InitMain {
 
     public void run() throws Exception {
 
-        String envLabel = System.getenv("ENV_LABEL");
+        String envLabel = Utils.getEnvironment().get("ENV_LABEL");
         if (envLabel == null) {
             throw new Exception("ENV_LABEL is required");
         }
@@ -151,10 +151,10 @@ public class InitMain {
     File getAnnotationsFile() {
         File annotationFile;
 
-        if (System.getenv("ANNOTATIONS_FILE") == null) {
+        if (Utils.getEnvironment().get("ANNOTATIONS_FILE") == null) {
             annotationFile = new File("/podinfo/annotations");
         } else {
-            annotationFile = new File(System.getenv("ANNOTATIONS_FILE"));
+            annotationFile = new File(Utils.getEnvironment().get("ANNOTATIONS_FILE"));
         }
 
         return annotationFile;
@@ -163,10 +163,10 @@ public class InitMain {
     File getSecretsFile() {
         File secretsFile;
 
-        if (System.getenv("SECRETS_FILE") == null) {
+        if (Utils.getEnvironment().get("SECRETS_FILE") == null) {
             secretsFile = new File("/bsycorp-init/secrets.properties");
         } else {
-            secretsFile = new File(System.getenv("SECRETS_FILE"));
+            secretsFile = new File(Utils.getEnvironment().get("SECRETS_FILE"));
         }
 
         return secretsFile;
@@ -175,10 +175,10 @@ public class InitMain {
     File getResourcesFile() {
         File resourcesFile;
 
-        if (System.getenv("RESOURCES_FILE") == null) {
+        if (Utils.getEnvironment().get("RESOURCES_FILE") == null) {
             resourcesFile = new File("/bsycorp-init/resources.properties");
         } else {
-            resourcesFile = new File(System.getenv("RESOURCES_FILE"));
+            resourcesFile = new File(Utils.getEnvironment().get("RESOURCES_FILE"));
         }
 
         return resourcesFile;
@@ -187,8 +187,8 @@ public class InitMain {
     File getResourcesFileForKey(String key) {
         File resourcesFile;
 
-        if (System.getenv("RESOURCES_FILE_PATH") != null) {
-            resourcesFile = new File(System.getenv("RESOURCES_FILE_PATH") + "/" + key);
+        if (Utils.getEnvironment().get("RESOURCES_FILE_PATH") != null) {
+            resourcesFile = new File(Utils.getEnvironment().get("RESOURCES_FILE_PATH") + "/" + key);
         } else {
             resourcesFile = new File("/bsycorp-init/" + key);
         }
