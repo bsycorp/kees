@@ -1,3 +1,5 @@
 FROM bitnami/java:1.8-prod
+RUN install_packages openssl
 ADD build/libs/kees-all.jar /app.jar
-CMD ["java", "-cp", "/app.jar", "com.bsycorp.kees.InitMain"]
+ADD docker/certs.sh /certs.sh
+CMD ["/bin/sh", "-c", "/certs.sh; java -cp /app.jar com.bsycorp.kees.InitMain"]
