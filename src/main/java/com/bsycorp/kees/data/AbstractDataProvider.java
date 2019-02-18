@@ -1,14 +1,15 @@
 package com.bsycorp.kees.data;
 
+import com.bsycorp.kees.gpg.GPGKeyGenerator;
 import com.bsycorp.kees.models.SecretTypeEnum;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractDataProvider implements DataProvider {
 
@@ -16,7 +17,7 @@ public abstract class AbstractDataProvider implements DataProvider {
     private static Logger LOG = LoggerFactory.getLogger(AbstractDataProvider.class);
 
     @Override
-    public Object[] generatePairedRaw(SecretTypeEnum type, String annotationName, int size) {
+    public Object[] generatePairedRaw(SecretTypeEnum type, String annotationName, int size, String userId) {
         SecureRandom random = getRandomFromKey(annotationName);
 
         if (type == SecretTypeEnum.RSA) {
@@ -25,14 +26,21 @@ public abstract class AbstractDataProvider implements DataProvider {
                 kpg.initialize(size, random);
                 KeyPair keyPair = kpg.generateKeyPair();
                 //Note for future nick*, getEncoded() is actually DER encoding.. so its still a 'raw' value..
-                return new Object[] {
+                return new Object[]{
                         keyPair.getPublic().getEncoded(), keyPair.getPrivate().getEncoded()
                 };
             } catch (NoSuchAlgorithmException e) {
                 LOG.error("Error generating RSA key", e);
                 throw new RuntimeException("Error generating RSA key");
             }
+        } else if (type == SecretTypeEnum.GPG) {
+            // generate password
+            byte[] password = generateRaw(SecretTypeEnum.PASSWORD, annotationName, 128);
 
+            // generate gpg key
+            GPGKeyGenerator.GPGKeyPair gpgKeyPair = new GPGKeyGenerator().generateKeyPair(
+                    userId, new String(password), size, random);
+            return new Object[]{gpgKeyPair.getPublicKey(), gpgKeyPair.getPrivateKey(), password};
         } else {
             throw new RuntimeException("Unsupported secret type: " + type);
         }
@@ -65,11 +73,8 @@ public abstract class AbstractDataProvider implements DataProvider {
     }
 
     @Override
-    public String[] generatePairedBase64Encoded(SecretTypeEnum type, String annotationName, int size) {
-        Object[] results = generatePairedRaw(type, annotationName, size);
-        return new String[]{
-                Base64.getEncoder().encodeToString((byte[]) results[0]),
-                Base64.getEncoder().encodeToString((byte[]) results[1])
-        };
+    public String[] generatePairedBase64Encoded(SecretTypeEnum type, String annotationName, int size, String userId) {
+        Object[] results = generatePairedRaw(type, annotationName, size, userId);
+        return Arrays.stream(results).map(o -> Base64.getEncoder().encodeToString((byte[]) o)).toArray(String[]::new);
     }
 }

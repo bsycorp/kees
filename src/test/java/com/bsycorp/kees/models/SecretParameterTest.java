@@ -69,6 +69,21 @@ public class SecretParameterTest {
         assertEquals(4096, parameter.getSize());
     }
 
+    @Test
+    public void shouldParseDynamicGPG4096Annotation() throws Exception {
+        SecretParameter parameter = new SecretParameter("secret.bsycorp.com/service-a.api-key", "kind=DYNAMIC,type=GPG,size=4096,userId=aaaa<aaaa@email.com>");
+
+        assertEquals("DYNAMIC", parameter.getKind().name());
+        assertEquals("GPG", parameter.getType().name());
+        assertEquals(4096, parameter.getSize());
+        assertEquals("aaaa<aaaa@email.com>", parameter.getUserId());
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void shouldFailIfGPGAnnotationMissingUserId() throws IOException {
+        new SecretParameter("secret.bsycorp.com/service-a.api-key", "kind=DYNAMIC,type=GPG,size=4096");
+    }
+
     @Test(expected = RuntimeException.class)
     public void shouldNotParseDynamicRSA12048Annotation() throws Exception {
         SecretParameter parameter = new SecretParameter("secret.bsycorp.com/service-a.api-key", "kind=DYNAMIC,type=RSA,size=12048");

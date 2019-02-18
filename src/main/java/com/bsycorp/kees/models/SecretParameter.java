@@ -12,6 +12,7 @@ public class SecretParameter extends Parameter {
     private String storageKey;
     private String localValue;
     private Properties rawInput;
+    private String userId;
 
     public SecretParameter(String annotationName, String annotationValue) throws IOException {
         setName(annotationName);
@@ -30,6 +31,12 @@ public class SecretParameter extends Parameter {
         }
         setStorageKey(rawInput, rawInput.getProperty("storageKey"));
         setLocalValue(rawInput, rawInput.getProperty("localModeValue"));
+        if (type == SecretTypeEnum.GPG) {
+            setUserId(rawInput.getProperty("userId"));
+            if (null == userId) {
+                throw new RuntimeException();
+            }
+        }
     }
 
     public SecretKindEnum getKind() {
@@ -46,6 +53,14 @@ public class SecretParameter extends Parameter {
 
     public void setType(Properties properties, SecretTypeEnum type) {
         this.type = type;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getUserId() {
+        return userId;
     }
 
     public int getSize() {

@@ -12,9 +12,9 @@ public class RandomDataProvider extends AbstractDataProvider {
     private static SecureRandom secureRandom = new SecureRandom();
 
     @Override
-    public Object[] generatePairedRaw(SecretTypeEnum type, String annotationName, int size) {
+    public Object[] generatePairedRaw(SecretTypeEnum type, String annotationName, int size, String userId) {
         LOG.info("Generating random {} data for key '{}' of size: {}", type, annotationName, size);
-        return super.generatePairedRaw(type, annotationName, size);
+        return super.generatePairedRaw(type, annotationName, size, userId);
     }
 
     @Override

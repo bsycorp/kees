@@ -23,15 +23,16 @@ public class LocalStorageProvider implements StorageProvider {
                 //local values are already encoded so return
                 return secretParameter.getLocalValue();
 
-            } else if (secretParameter.getType() == SecretTypeEnum.RSA && secretParameter.getFieldName().equals("public")) {
-                return dataProvider.generatePairedBase64Encoded(secretParameter.getType(), secretParameter.getParameterName(), secretParameter.getSize())[0];
-
-            } else if (secretParameter.getType() == SecretTypeEnum.RSA && secretParameter.getFieldName().equals("private")) {
-                return dataProvider.generatePairedBase64Encoded(secretParameter.getType(), secretParameter.getParameterName(), secretParameter.getSize())[1];
-
+            } else if (secretParameter.getType() == SecretTypeEnum.GPG && secretParameter.getFieldName().equals("password")) {
+                return dataProvider.generatePairedBase64Encoded(secretParameter.getType(), secretParameter.getParameterName(), secretParameter.getSize(), secretParameter.getUserId())[2];
+            } else if ((secretParameter.getType() == SecretTypeEnum.RSA || secretParameter.getType() == SecretTypeEnum.GPG)
+                    && secretParameter.getFieldName().equals("public")) {
+                return dataProvider.generatePairedBase64Encoded(secretParameter.getType(), secretParameter.getParameterName(), secretParameter.getSize(), secretParameter.getUserId())[0];
+            } else if ((secretParameter.getType() == SecretTypeEnum.RSA || secretParameter.getType() == SecretTypeEnum.GPG)
+                    && secretParameter.getFieldName().equals("private")) {
+                return dataProvider.generatePairedBase64Encoded(secretParameter.getType(), secretParameter.getParameterName(), secretParameter.getSize(), secretParameter.getUserId())[1];
             } else {
                 return dataProvider.generateBase64Encoded(secretParameter.getType(), secretParameter.getParameterName(), secretParameter.getSize());
-
             }
 
         } else if (parameter instanceof ResourceParameter) {

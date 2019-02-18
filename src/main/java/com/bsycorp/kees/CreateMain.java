@@ -38,7 +38,7 @@ public class CreateMain {
     private AtomicInteger exceptionCounter = new AtomicInteger();
     private AtomicInteger eventCounter = new AtomicInteger();
 
-    private Map<String, String> expiryingCache = new PassiveExpiringMap(60000);
+    private Map<String, String> expiryingCache = new PassiveExpiringMap<>(60000);
 
     public static void main(String... argv) throws Exception {
         CreateMain main = new CreateMain();
@@ -115,11 +115,18 @@ public class CreateMain {
                                                 //need special behaviour for RSA as it has two params generated from one call. breaks abstracts and is annoying.
                                                 if (secretParameter.getType() == SecretTypeEnum.RSA) {
                                                     parameter.overrideFieldName("public");
-                                                    String[] encodedValues = dataProvider.generatePairedBase64Encoded(secretParameter.getType(), parameter.getParameterName(), secretParameter.getSize());
+                                                    String[] encodedValues = dataProvider.generatePairedBase64Encoded(secretParameter.getType(), parameter.getParameterName(), secretParameter.getSize(), secretParameter.getUserId());
                                                     storageProvider.put(storagePrefix, parameter, encodedValues[0]);
                                                     parameter.overrideFieldName("private");
                                                     storageProvider.put(storagePrefix, parameter, encodedValues[1]);
-
+                                                } else if (secretParameter.getType() == SecretTypeEnum.GPG) {
+                                                    parameter.overrideFieldName("public");
+                                                    String[] encodedValues = dataProvider.generatePairedBase64Encoded(secretParameter.getType(), parameter.getParameterName(), secretParameter.getSize(), secretParameter.getUserId());
+                                                    storageProvider.put(storagePrefix, parameter, encodedValues[0]);
+                                                    parameter.overrideFieldName("private");
+                                                    storageProvider.put(storagePrefix, parameter, encodedValues[1]);
+                                                    parameter.overrideFieldName("password");
+                                                    storageProvider.put(storagePrefix, parameter, encodedValues[2]);
                                                 //TODO extract this out to another secret type
                                                 } else if (secretParameter.getType() == SecretTypeEnum.RANDOM && secretParameter.getParameterName().startsWith("api-key")) {
                                                     String encodedValue = dataProvider.generateBase64Encoded(secretParameter.getType(), parameter.getParameterName(), secretParameter.getSize());
