@@ -85,6 +85,11 @@ public class SecretParameterTest {
     }
 
     @Test(expected = RuntimeException.class)
+    public void shouldFailIfGPGAnnotationUserIdInvalidFormat() throws IOException {
+        new SecretParameter("secret.bsycorp.com/service-a.api-key", "kind=DYNAMIC,type=GPG,size=4096,userId=aaaa@email.com");
+    }
+
+    @Test(expected = RuntimeException.class)
     public void shouldNotParseDynamicRSA12048Annotation() throws Exception {
         SecretParameter parameter = new SecretParameter("secret.bsycorp.com/service-a.api-key", "kind=DYNAMIC,type=RSA,size=12048");
     }

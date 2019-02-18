@@ -3,6 +3,7 @@ package com.bsycorp.kees.models;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 public class SecretParameter extends Parameter {
 
@@ -34,7 +35,10 @@ public class SecretParameter extends Parameter {
         if (type == SecretTypeEnum.GPG) {
             setUserId(rawInput.getProperty("userId"));
             if (null == userId) {
-                throw new RuntimeException();
+                throw new RuntimeException("userId must be defined");
+            }
+            if (!Pattern.compile(".+<.+>").matcher(userId).matches()) {
+                throw new RuntimeException("userId must be of the form \"userId<email>\"");
             }
         }
     }
