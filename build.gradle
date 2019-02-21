@@ -42,11 +42,18 @@ dependencies {
     // ideally would use the official client but it looks very immature - compile "io.kubernetes:client-java:0.2"
     compile "io.fabric8:kubernetes-client:3.1.8" //this one looks better.
     compile "org.apache.commons:commons-collections4:4.1"
+    compile "org.bouncycastle:bcpg-jdk15on:1.60"
 
     testCompile "com.github.stefanbirkner:system-rules:1.17.0"
     testCompile "junit:junit:4.11"
     testCompile "io.fabric8:kubernetes-server-mock:3.1.8"
     testCompile "org.mockito:mockito-core:1.8.4"
+    // We use bouncy-gpg to test the deterministic generated gpg keys
+    testCompile("name.neuhalfen.projects.crypto.bouncycastle.openpgp:bouncy-gpg:2.1.0") {
+        exclude group: "org.bouncycastle", module: "bcprov-jdk15on"
+        exclude group: "org.bouncycastle", module: "bcpg-jdk15on"
+    }
+    testCompile "org.bouncycastle:bcprov-jdk15on:1.60"
 }
 
 jar {

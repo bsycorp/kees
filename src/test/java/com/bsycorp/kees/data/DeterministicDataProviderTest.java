@@ -2,52 +2,147 @@ package com.bsycorp.kees.data;
 
 import com.bsycorp.kees.models.SecretTypeEnum;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import name.neuhalfen.projects.crypto.bouncycastle.openpgp.BouncyGPG;
+import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.callbacks.KeyringConfigCallbacks;
+import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.keyrings.InMemoryKeyring;
+import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.keyrings.KeyringConfigs;
+import org.bouncycastle.util.io.Streams;
+import org.hamcrest.core.IsEqual;
+import org.hamcrest.core.IsNot;
+import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
 public class DeterministicDataProviderTest {
 
-    DataProvider dataProvider = new DeterministicDataProvider();
+    private static final DataProvider DATA_PROVIDER = new DeterministicDataProvider();
+    private static final Base64.Decoder DECODER = Base64.getDecoder();
 
     @Test
-    public void shouldCreateDeterministicRSA() throws Exception {
-        String expectedPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgQI70at0oy5nLrrdJloJPjJMlPkSiPzK+djmCkJkyg5AExEIf2wU/+DoLb8vVJvl6sHq+HTA0ViWoJqbEet8nr6PLI+aSNDhAHgV35RoHDBERSm42dEZswEJ2ZvZhfMuYJLDFER9qO9f+qWUpWR8q5fp8LC2M0ofLcUC7yStBDkzKjyfAqehXG+bHyg90HWZkm8iCZ4TWDndJdB0IBBEP7o3M9wuH8kJiaM1L/i1dl761uoVxyf5ANhec9KvT5L9o49ZuxD8rfjHHa23YvhNFF69MOag+/SwOspVeLZynzeAQ7zioYJXjZrNwvLCdRw3lYF20egTbM2EFOqVGX5alQIDAQAB";
-        String expectedPrivateKey = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCBAjvRq3SjLmcuut0mWgk+MkyU+RKI/Mr52OYKQmTKDkATEQh/bBT/4Ogtvy9Um+Xqwer4dMDRWJagmpsR63yevo8sj5pI0OEAeBXflGgcMERFKbjZ0RmzAQnZm9mF8y5gksMURH2o71/6pZSlZHyrl+nwsLYzSh8txQLvJK0EOTMqPJ8Cp6Fcb5sfKD3QdZmSbyIJnhNYOd0l0HQgEEQ/ujcz3C4fyQmJozUv+LV2XvrW6hXHJ/kA2F5z0q9Pkv2jj1m7EPyt+Mcdrbdi+E0UXr0w5qD79LA6ylV4tnKfN4BDvOKhgleNms3C8sJ1HDeVgXbR6BNszYQU6pUZflqVAgMBAAECggEAOhsVclR1TmJCGywTG4kGDLt+/sJIdObXTT1CL3DEELXmajAL0ciOlMlqCeDIoqUtI1WATbPYfPIXtfKs0Z9tG9rchceQSCe8kAeGYpNnaPrcZQJrvb+Oga+ADkFB8jEbvGed8ez/ZC2c3zng/7WI6Yic18nf5q4F6QmJTskIHJQ4gDSsbBjwwFN6VJc7RBHlJViBoUgMpgE3ksHa27NM7DbM+y9tC6rx/CFBn2g0CH0nRATj2fOye8IvozDmOd+Zgp4XbR8MrE8e0rgCxjiLTQlN5PeMgqZoZRLAfPTcWBVFE3aHClBpKIxT+kRyKi9S7TrgIr63O/UXEe5PmAjjgQKBgQDZU3Uvyj+/l/qTaxbyzFdc6zPBt/KAlKd+bwsfyvjkM7Z22r9n46pUxuAcE/2AyoZDZeDqWto9498zdgEHptfEO4qdwKRAYnjT4kb1VU1O/Hs2YmkGmWCCxovPbO/FsRYikNPZ1fOs0j9jobc5rKWdjnOPFwviFp/y1mRWHB6JRQKBgQCX92DL7K54WUc7kL0m6LyxiGUZxv82kq0npIdJ16GK9qo4vgYr3n1lud7aUDoa1opeqGsM8KKdgmcx2Sng3+z+Tw/en6t1RXK0r6SHeeQ4EKr5AYr2qR1IkcGN3wxOSSl9rWXdTZUxfzU3Lm2+zvACbKXSPgkeCvLK20wKCAmZEQKBgDxKJ9djLz4ypkQhUFN5Fr9jTI9wPWkoVDMCET73qwZ7xiHA25qxkP5F0cRYU1pYVNj7uWKqY6MJxVDcarq5sV/x+Kl82NQ3vTdirba/vFuuNWxH7sTy5dBBzmVz3iykzPQ3412qOhh2lzlHkrIAUE2eSDao+RX2mtbeXSV6VYpVAoGAMdz55e/DT7n7pY/YgOvc/mPCyLKDC2UVa+yQd6pJV0+YiwXPAJYAj2BtvzST3DqJLIYWmihbM1OWiMS4+RCAsvE+Q84gdFpVSPRZCBr2x26wqwPWlRjogudQmzyUzRs0gghjZDoQui0DSRfy6qj8F8+OmW3BkBoHkIhkauY4QAECgYByEemoH0FKyCJsr5iWxQTTElPh+z6Ts6ke+21QlURDWJJM39cWG4E1BqdZVoCy9FDpB9paVnFK/612vyVBWjt3p4nvjgsNaI3WnFBS5iA6+llkhgEuhVWH5B741qi+pn9zxu6s/coYnJyoEDVSHUL4a+HOPLniIQMcGBwe/v7lOw==";
+    public void shouldCreateDeterministicRSA() {
+        String expectedPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz73Y8E9KvvD5wLVwdftSmToymFrtg9uFLJlSakzpULSfxw0ZYxsJjJBdhil10qozwVZPkGaHZpaC1p9dlaaUedHr1pD23KsNT57dwm2NYW6kAZITVNKciddALFAfCW5E8JrQh8zKwHu96N3UMw/HOANOQ2ZxpI1PMONESaIy9bM/2v8p6TAlECe1S86Vha6mLGz8kVmqNaRDAG6kmfQj4dH5RWPL1XMaIxd/eeL+pV+nOHMjU0SJaPWhbaPA9jJEJFm0LgWGGzyFOxtmMKFKPHR9C8SpNJ/CQ+qWi4FWMHOvvxvsgW4x2i+weuylWV2NKxCwH2xZdnHKwHGcnU8DRwIDAQAB";
+        String expectedPrivateKey = "MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDPvdjwT0q+8PnAtXB1+1KZOjKYWu2D24UsmVJqTOlQtJ/HDRljGwmMkF2GKXXSqjPBVk+QZodmloLWn12VppR50evWkPbcqw1Pnt3CbY1hbqQBkhNU0pyJ10AsUB8JbkTwmtCHzMrAe73o3dQzD8c4A05DZnGkjU8w40RJojL1sz/a/ynpMCUQJ7VLzpWFrqYsbPyRWao1pEMAbqSZ9CPh0flFY8vVcxojF3954v6lX6c4cyNTRIlo9aFto8D2MkQkWbQuBYYbPIU7G2YwoUo8dH0LxKk0n8JD6paLgVYwc6+/G+yBbjHaL7B67KVZXY0rELAfbFl2ccrAcZydTwNHAgMBAAECggEAWCmkuI+eFBymkZ8uxBNNwZOOR1RHem8ePIgxDsXnOoX9TPeFL6cYzVuzJS3RP/9ViZZ8m7a3fdUgX78wc0NHvc9V/DB3Y70AICs2x73Ag3n2Bmic5aGgJ2t/Y475LQJsJYQ+PXOvFDMvrHUACk+G54GXpEkEr6X81q2MnIdGgzi0Fhj+nJzg/XiPqzpMcsebdYDupSXzixjvZBA9UKhJxVvDfMLFqKULyaoQ+iGGUiSrvsVZkI3l7FD1LpsZ0UkAYHOe+JKSZAoCfc7eNrEWntwgSzgEc7R2Z/9JB8pSTv5Mkn3+tzfOP0fphOYmEhLfxlKzu/Erhql3W9bccVVsUQKBgQD2R8wa7nM2p7rFjXnc5dZEej3vTqccWc+rNL6U3FzgTSjVCh4cIWOaFUujHpzNKMFODkrTjoTe0cItC+vwIcg1WoJv89Mz1RMCQqV2/dxWJXQ4mV6OzZurSWa2ZKptG4KKXkT7u2PNxWCz88DbAlV19nrg0x7LVlCB4rYpxVPTPwKBgQDX8K/j6n8/XbAumg6WUbMxpf5gwJRgQDVc3pslUQUv9dgj55DO5vaUgjIUAQx6XqY6bWdGe3WmZDgk7LzUBSTHpzkyWco/lWq84GzEQ6D/nTiM6MzrJAcUhEwuEM9vhss/H+zrJdWeRS9d5wAZBDrfUJ4ARw6vcAFYbYeImdW1+QKBgQCYoky8EDZ1lCRsFU+GeSd/jyddbiihqIPNPsYy6hPhq9B3oGqi0oqxTytucCWL/Qs4viDf1r9AfU3Tr0TNsZIshui6S6oEwLSkPPvhsFnjRhkujtcMuB8XXEl9FwyMzHTuHpiwTyX+vKo/PP20flDK6DSlrBK0wMzqgsCVSMe37wKBgQCp8Ij73Pf3bkvQ4PzJ39IeKHxguC4M8XsNc0K1w2VJsThASWT0717u0OeIRqsDQqmfIao9FbwpDoYAyS5xzPp9BWVF8tPv5i7yJcxzSKXThG+UtUFPbDMGOneZaTFWm8YoD3/sLwJGZDw6siiph2KtjExL+5/bAVKNvOUE48wEQQKBgQCW8gozAlnRFvXRDclF10PBqaPUowO/SR1gl8P9ZvdoisNobwonttKhxWpFgDig+7rhnc1PHaPdr16evC3VFC/XZFZMTj9uQ7TVdftf/3T6s9YyMbNnFzIp8Pbg5/4WIBJ220a8rY+chqEe66dNBwprjRW2UMtxo6jsR2uvrkputg==";
 
-        assertEquals(expectedPublicKey, dataProvider.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_public", 2048)[0]);
-        assertEquals(expectedPublicKey, dataProvider.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_public", 2048)[0]);
-        assertEquals(expectedPublicKey, dataProvider.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_public", 2048)[0]);
+        assertEquals(expectedPublicKey, DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_public", 2048, null)[0]);
+        assertEquals(expectedPublicKey, DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_public", 2048, null)[0]);
+        assertEquals(expectedPublicKey, DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_public", 2048, null)[0]);
 
-        assertEquals(expectedPrivateKey, dataProvider.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_private", 2048)[1]);
-        assertEquals(expectedPrivateKey, dataProvider.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_private", 2048)[1]);
-        assertEquals(expectedPrivateKey, dataProvider.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_private", 2048)[1]);
+        assertEquals(expectedPrivateKey, DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_private", 2048, null)[1]);
+        assertEquals(expectedPrivateKey, DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_private", 2048, null)[1]);
+        assertEquals(expectedPrivateKey, DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_private", 2048, null)[1]);
+    }
+
+    /**
+     * We need to test that for the same annotation parameters, the generated key can be used for encryption/decryption/signing.
+     *
+     * We generate 3 key pairs for the test.
+     * 1. A signer using a unique annotation name.
+     * 2. Two decrypters, using identical annotations.
+     *
+     * The raw input is encrypted using recipient1's public key and signed with signer's private key.
+     *
+     * The encrypted file is then decrypted with recipient2's private key.
+     *
+     * Note: UserId must be in form of "USER <EMAIL>".
+     */
+    @Test
+    public void shouldCreateDeterministicGPG() throws Exception {
+        final String signerUserId = "signer<signer@email.com>";
+        final String decrypterUserId = "decrypter<decrypter@email.com>";
+        final Object[] signer = DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.GPG, "app.key.signer", 4096, signerUserId);
+
+        byte[] signerPublic = DECODER.decode((String) signer[0]);
+        byte[] signerPrivate = DECODER.decode((String) signer[1]);
+        final String signerPassword = new String(DECODER.decode((String) signer[2]));
+
+        final Object[] decrypter1 = DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.GPG, "app.key.decrypter", 4096, decrypterUserId);
+        byte[] decrypterPublic1 = DECODER.decode((String) decrypter1[0]);
+        byte[] decrypterPrivate1 = DECODER.decode((String) decrypter1[1]);
+        final String decrypterPassword1 = new String(DECODER.decode((String) decrypter1[2]));
+
+        final Object[] decrypter2 = DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.GPG, "app.key.decrypter", 4096, decrypterUserId);
+        byte[] decrypterPublic2 = DECODER.decode((String) decrypter2[0]);
+        byte[] decrypterPrivate2 = DECODER.decode((String) decrypter2[1]);
+        final String decrypterPassword2 = new String(DECODER.decode((String) decrypter2[2]));
+
+        Assert.assertThat(decrypterPrivate1, IsNot.not(IsEqual.equalTo(decrypterPrivate2)));
+        Assert.assertEquals(decrypterPassword1, decrypterPassword2);
+
+        /*
+         * Encrypt with decrypterPublic1 and sign with signer.
+         */
+        CryptoTestUtils.EncryptionService encryptionService = new CryptoTestUtils.EncryptionService(
+                decrypterPublic1, signerPrivate, signerPublic, signerPassword);
+
+        /*
+         * Decrypt with decrypterPublic2 and verify signature.
+         */
+        CryptoTestUtils.DecryptionService decryptionService = new CryptoTestUtils.DecryptionService(
+                decrypterPassword2, decrypterPrivate2, decrypterPublic2, signerUserId, signerPublic
+        );
+
+        final byte[] raw = "This is a test string".getBytes();
+
+        final byte[] encrypted = encryptionService.encrypt(new ByteArrayInputStream(raw), decrypterUserId, signerUserId);
+
+        final byte[] decrypted = decryptionService.decryptAndVerify(new ByteArrayInputStream(encrypted));
+
+        Assert.assertArrayEquals(decrypted, raw);
     }
 
     @Test
-    public void shouldCreateDeterministicPassword() throws Exception {
-        String password = new String(dataProvider.generateRaw(SecretTypeEnum.PASSWORD, "app.service.blah", 128));
+    public void shouldCreateDeterministicPassword() {
+        String password = new String(DATA_PROVIDER.generateRaw(SecretTypeEnum.PASSWORD, "app.service.blah", 128));
         assertEquals("8ekD64eU9hDqA5kz", password);
         assertEquals(16, password.length());
 
-        password = new String(dataProvider.generateRaw(SecretTypeEnum.PASSWORD, "app.service.blah", 128));
+        password = new String(DATA_PROVIDER.generateRaw(SecretTypeEnum.PASSWORD, "app.service.blah", 128));
         assertEquals("8ekD64eU9hDqA5kz", password);
         assertEquals(16, password.length());
 
-        password = new String(dataProvider.generateRaw(SecretTypeEnum.PASSWORD, "app.service.blah", 128));
+        password = new String(DATA_PROVIDER.generateRaw(SecretTypeEnum.PASSWORD, "app.service.blah", 128));
         assertEquals("8ekD64eU9hDqA5kz", password);
         assertEquals(16, password.length());
     }
 
     @Test
-    public void shouldCreateDeterministicRandom() throws Exception {
-        String encodedRandom = new String(dataProvider.generateBase64Encoded(SecretTypeEnum.RANDOM, "app.service.blah", 288));
+    public void shouldCreateDeterministicRandom() {
+        String encodedRandom = new String(DATA_PROVIDER.generateBase64Encoded(SecretTypeEnum.RANDOM, "app.service.blah", 288));
         assertEquals("JuTNTwzlgOWVLXk6aG8LQiZ6JXuGlPpaXvEKJkk7jDjsrJpC", encodedRandom);
 
-        encodedRandom = new String(dataProvider.generateBase64Encoded(SecretTypeEnum.RANDOM, "app.service.blah", 288));
+        encodedRandom = new String(DATA_PROVIDER.generateBase64Encoded(SecretTypeEnum.RANDOM, "app.service.blah", 288));
         assertEquals("JuTNTwzlgOWVLXk6aG8LQiZ6JXuGlPpaXvEKJkk7jDjsrJpC", encodedRandom);
 
-        encodedRandom = new String(dataProvider.generateBase64Encoded(SecretTypeEnum.RANDOM, "app.service.blah", 288));
+        encodedRandom = new String(DATA_PROVIDER.generateBase64Encoded(SecretTypeEnum.RANDOM, "app.service.blah", 288));
         assertEquals("JuTNTwzlgOWVLXk6aG8LQiZ6JXuGlPpaXvEKJkk7jDjsrJpC", encodedRandom);
+    }
+
+    @Ignore
+    @Test
+    public void generateDeterministicRSAKeys() throws IOException {
+        final int numberOfKeyPairs = 1000;
+
+        List<String[]> keyPairs = new ArrayList<>();
+
+        for (int i= 0; i < numberOfKeyPairs; i++) {
+            String[] keyPair = new RandomDataProvider().generatePairedBase64Encoded(SecretTypeEnum.RSA, "app.key.v1_public", 2048, null);
+            keyPairs.add(keyPair);
+        }
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.writeValue(new File(numberOfKeyPairs + "_deterministic_rsa_keys.json"), keyPairs);
     }
 }

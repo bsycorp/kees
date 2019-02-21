@@ -23,7 +23,7 @@ public class LocalStorageProviderTest {
     public void shouldRetrieveEncodedValueForParameter() throws Exception {
         Parameter parameter = Parameter.construct("secret.bsycorp.com/service-b.v1_public", "kind=DYNAMIC,type=RSA,size=2048");
         String result = new String(provider.get("local", parameter));
-        assertEquals("MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgQI70at0oy5nLrrdJloJPjJMlPkSiPzK+djmCkJkyg5AExEIf2wU/+DoLb8vVJvl6sHq+HTA0ViWoJqbEet8nr6PLI+aSNDhAHgV35RoHDBERSm42dEZswEJ2ZvZhfMuYJLDFER9qO9f+qWUpWR8q5fp8LC2M0ofLcUC7yStBDkzKjyfAqehXG+bHyg90HWZkm8iCZ4TWDndJdB0IBBEP7o3M9wuH8kJiaM1L/i1dl761uoVxyf5ANhec9KvT5L9o49ZuxD8rfjHHa23YvhNFF69MOag+/SwOspVeLZynzeAQ7zioYJXjZrNwvLCdRw3lYF20egTbM2EFOqVGX5alQIDAQAB", result);
+        assertEquals("MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmFuN37R3egbUcXtNkYiGrc/kYGYClIDCnkER1gRKEJ8xDaUdYJDA0DjiN1S7pX4GEUURDBDWD5fHyDtX38tgAMR1fnUt9EGLxOXCSgDCYpGNcd/toMnsKwkgvEDr9DupA/RlH5VUl+HytzcgWKNj1oG0k6qOyzXSrBpiWe693CX+F2etChU7cBBPxGPKCYSgw2laLNoLiFUZVgeakkhL3A7vMYuTQSK3w3iavYFe1x1Mwq16HA8yPU7qaHyvtZAm/ld5u3qM6nABFikTZhlSIirQa4WNL5+e7jcapKEWmo+PcTr3Thr1pi+8OXXuv4QwjaYOCQFxC1CH8zyjIViRJQIDAQAB", result);
     }
 
     @Test

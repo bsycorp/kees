@@ -1,8 +1,12 @@
 package com.bsycorp.kees;
 
+import java.io.ByteArrayInputStream;
+import java.util.Properties;
 import org.apache.commons.io.FileUtils;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
@@ -15,16 +19,14 @@ public class InitMainTest {
 
     @ClassRule
     public static final EnvironmentVariables environmentVariables = new EnvironmentVariables();
-    InitMain initMain = new InitMain();
 
     private static File tempAnnotationsFile;
     private static File tempSecretsFile;
     private static File tempResourcesFile;
     private static String tempResourcesFilePath;
-    private static String originalAnnotationFilePath = InitMainTest.class.getClassLoader().getResource("annotations.txt").getFile();
 
-    @Before
-    public void setUp() throws Exception {
+    private void init(String originalAnnotationFileName) throws Exception {
+        String originalAnnotationFilePath = InitMainTest.class.getClassLoader().getResource(originalAnnotationFileName).getFile();
         tempAnnotationsFile = File.createTempFile("annotations", ".txt");
         tempAnnotationsFile.deleteOnExit();
 
@@ -53,6 +55,8 @@ public class InitMainTest {
 
     @Test
     public void shouldBeSuccessful() throws Exception {
+        init("annotations.txt");
+
         InitMain.main();
 
         String expectedSecrets = FileUtils.readFileToString(new File(this.getClass().getClassLoader().getResource("expected-secrets.properties").getFile()), "UTF-8");
@@ -66,6 +70,25 @@ public class InitMainTest {
 
     }
 
+    /*
+     * Kind of hard to test as for deterministic GPG keys, we get different armored outputs (The underlying RSA keys are the same).
+     * Test not null for private and public key. Password output is deterministic.
+     */
+    @Test
+    public void shouldBeSuccessfulForGPGAnnotations() throws Exception {
+        init("annotations-gpg.txt");
+
+        InitMain.main();
+
+        final String result = FileUtils.readFileToString(tempSecretsFile, "UTF-8");
+        final Properties props = new Properties();
+        props.load(new ByteArrayInputStream(result.getBytes()));
+
+        Assert.assertNotNull(props.getProperty("common.gpg.v1_private"));
+        Assert.assertNotNull(props.getProperty("common.gpg.v1_public"));
+        Assert.assertEquals("SmRGbU5tSUh0MjhZc3RXcQ==", props.getProperty("common.gpg.v1_password"));
+    }
+
     @Test(expected = Exception.class)
     public void shouldBeUnsuccessful() throws Exception {
         FileUtils.copyFile(new File(InitMainTest.class.getClassLoader().getResource("annotations-malformed.txt").getFile()), tempAnnotationsFile);
@@ -74,6 +97,8 @@ public class InitMainTest {
 
     @Test
     public void testConfigGetters() throws Exception {
+        InitMain initMain = new InitMain();
+
         String annotations = "init.bsycorp.com/local-mode: \"true\"";
         annotations += "\n";
         annotations += "init.bsycorp.com/storage-prefix: \"/bsycorp/staging\"";

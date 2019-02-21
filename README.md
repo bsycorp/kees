@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/bsycorp/kees.svg?branch=master)](https://travis-ci.org/bsycorp/kees)
 
-https://hub.docker.com/r/bsycorp/kees/
+https://hub.docker.com/r/bsycorp/kees-init/
 
 In our current draft of Kubernetes Secret Management, we have three components: Init Container, Creator and Exporter.
 
@@ -86,7 +86,7 @@ secret.bsycorp.com/signingKey.v1_private="kind=DYNAMIC,type=RSA,size=2048,foo=ba
 secret.bsycorp.com/db.password="kind=REFERENCE,type=PASSWORD"
 ```
 
-## Step 3:
+### Step 3:
 
 The init image will then
 
@@ -102,9 +102,23 @@ signingKey.v1_private=privatekeydummyvalue
 signingKey.v1_public=publickeydummyvalue
 ```
 
-## Step 4:
+### Step 4:
 
 When the init container completes, app container will spin up, and will be able to consume the secrets from /secret/secret in the EmptyDir volume.
+
+## GPG support
+GPG key generation requires the userId to be provided as an annotation parameter. This must be of the form of "user<email>".
+A random password is generated and used for the GPG key pair generation. The output is an encoded armored GPG key pair and corresponding password.
+
+For example:
+```
+secret.bsycorp.com/gpg.v1_public: "kind=DYNAMIC,type=GPG,size=2048,userId=foo<bar@email.com>"
+secret.bsycorp.com/gpg.v1_private: "kind=DYNAMIC,type=GPG,size=2048,userId=foo<bar@email.com>"
+secret.bsycorp.com/gpg.v1_password: "kind=DYNAMIC,type=GPG,size=2048,userId=foo<bar@email.com>"
+```
+
+Note: The deterministic provider will generate deterministic RSA keys and use those keys for the GPG secret key creation.
+Although the armored output of these keys will be different every time, the underlying RSA keys are the same and will be able to encrypt/decrypt/sign.
 
 # Reference
 
