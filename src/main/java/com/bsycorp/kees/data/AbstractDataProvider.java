@@ -40,7 +40,7 @@ public abstract class AbstractDataProvider implements DataProvider {
             // generate gpg key
             GPGKeyGenerator.GPGKeyPair gpgKeyPair = new GPGKeyGenerator().generateKeyPair(
                     userId, new String(password), size, random);
-            return new Object[]{gpgKeyPair.getPublicKey(), gpgKeyPair.getPrivateKey(), password};
+            return new Object[]{gpgKeyPair.getPublicKey(), gpgKeyPair.getPrivateKey(), userId.getBytes(), password};
         } else {
             throw new RuntimeException("Unsupported secret type: " + type);
         }

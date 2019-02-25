@@ -117,6 +117,16 @@ secret.bsycorp.com/gpg.v1_private: "kind=DYNAMIC,type=GPG,size=2048,userId=foo<b
 secret.bsycorp.com/gpg.v1_password: "kind=DYNAMIC,type=GPG,size=2048,userId=foo<bar@email.com>"
 ```
 
+Alternatively the userId could be provided as a custom annotation. This enables the userId to be available as a secret in the container.
+
+For example:
+```
+custom.bsycorp.com/gpg.v1_userId: "fixedValue=foo<bar@email.com>"
+secret.bsycorp.com/gpg.v1_public: "kind=DYNAMIC,type=GPG,size=2048"
+secret.bsycorp.com/gpg.v1_private: "kind=DYNAMIC,type=GPG,size=2048"
+secret.bsycorp.com/gpg.v1_password: "kind=DYNAMIC,type=GPG,size=2048"
+```
+
 Note: The deterministic provider will generate deterministic RSA keys and use those keys for the GPG secret key creation.
 Although the armored output of these keys will be different every time, the underlying RSA keys are the same and will be able to encrypt/decrypt/sign.
 

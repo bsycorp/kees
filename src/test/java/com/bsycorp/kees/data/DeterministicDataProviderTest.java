@@ -1,26 +1,15 @@
 package com.bsycorp.kees.data;
 
 import com.bsycorp.kees.models.SecretTypeEnum;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.BufferedOutputStream;
+
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import name.neuhalfen.projects.crypto.bouncycastle.openpgp.BouncyGPG;
-import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.callbacks.KeyringConfigCallbacks;
-import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.keyrings.InMemoryKeyring;
-import name.neuhalfen.projects.crypto.bouncycastle.openpgp.keys.keyrings.KeyringConfigs;
-import org.bouncycastle.util.io.Streams;
-import org.hamcrest.core.IsEqual;
-import org.hamcrest.core.IsNot;
+
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -67,19 +56,22 @@ public class DeterministicDataProviderTest {
 
         byte[] signerPublic = DECODER.decode((String) signer[0]);
         byte[] signerPrivate = DECODER.decode((String) signer[1]);
-        final String signerPassword = new String(DECODER.decode((String) signer[2]));
+        final String signerPassword = new String(DECODER.decode((String) signer[3]));
 
         final Object[] decrypter1 = DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.GPG, "app.key.decrypter", 4096, decrypterUserId);
         byte[] decrypterPublic1 = DECODER.decode((String) decrypter1[0]);
         byte[] decrypterPrivate1 = DECODER.decode((String) decrypter1[1]);
-        final String decrypterPassword1 = new String(DECODER.decode((String) decrypter1[2]));
+        final String decrypterUserId1 = new String(DECODER.decode((String) decrypter1[2]));
+        final String decrypterPassword1 = new String(DECODER.decode((String) decrypter1[3]));
 
         final Object[] decrypter2 = DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.GPG, "app.key.decrypter", 4096, decrypterUserId);
         byte[] decrypterPublic2 = DECODER.decode((String) decrypter2[0]);
         byte[] decrypterPrivate2 = DECODER.decode((String) decrypter2[1]);
-        final String decrypterPassword2 = new String(DECODER.decode((String) decrypter2[2]));
+        final String decrypterUserId2 = new String(DECODER.decode((String) decrypter2[2]));
+        final String decrypterPassword2 = new String(DECODER.decode((String) decrypter2[3]));
 
-        Assert.assertThat(decrypterPrivate1, IsNot.not(IsEqual.equalTo(decrypterPrivate2)));
+        Assert.assertNotEquals(decrypterPrivate1, decrypterPrivate2);
+        Assert.assertEquals(decrypterUserId1, decrypterUserId2);
         Assert.assertEquals(decrypterPassword1, decrypterPassword2);
 
         /*
@@ -92,8 +84,7 @@ public class DeterministicDataProviderTest {
          * Decrypt with decrypterPublic2 and verify signature.
          */
         CryptoTestUtils.DecryptionService decryptionService = new CryptoTestUtils.DecryptionService(
-                decrypterPassword2, decrypterPrivate2, decrypterPublic2, signerUserId, signerPublic
-        );
+                decrypterPassword2, decrypterPrivate2, decrypterPublic2, signerUserId, signerPublic);
 
         final byte[] raw = "This is a test string".getBytes();
 

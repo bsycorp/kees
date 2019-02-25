@@ -55,7 +55,7 @@ public class DeterministicDataProvider extends AbstractDataProvider {
             final GPGKeyGenerator gpgKeyGenerator = new GPGKeyGenerator();
             final GPGKeyGenerator.GPGKeyPair gpgKeyPair = gpgKeyGenerator.generateDeterministicKeyPair(
                     userId, new String(password), DECODER.decode(values[0]), DECODER.decode(values[1]));
-            return new Object[]{gpgKeyPair.getPublicKey(), gpgKeyPair.getPrivateKey(), password};
+            return new Object[]{gpgKeyPair.getPublicKey(), gpgKeyPair.getPrivateKey(), userId.getBytes(), password};
         }
 
         return new Object[]{

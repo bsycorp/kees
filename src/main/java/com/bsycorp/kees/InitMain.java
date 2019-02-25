@@ -1,5 +1,6 @@
 package com.bsycorp.kees;
 
+import com.bsycorp.kees.models.CustomParameter;
 import com.bsycorp.kees.models.Parameter;
 import com.bsycorp.kees.models.ResourceParameter;
 import com.bsycorp.kees.models.SecretParameter;
@@ -78,6 +79,10 @@ public class InitMain {
             try {
                 String fileKey = parameter.getParameterNameWithField();
                 if (parameter instanceof SecretParameter) {
+                    SecretParameter secretParameter = (SecretParameter) parameter;
+                    if (secretParameter.getUserId() == null) {
+                        secretParameter.setUserId(getCustomParameter(parameters, parameter, "userId"));
+                    }
                     //secret params are encoded at rest, so get retrieves an encodedValue
                     String encodedValue = storageProvider.get(storagePrefix, parameter);
                     if (encodedValue == null) {
@@ -94,6 +99,15 @@ public class InitMain {
                         throw new RuntimeException("Couldn't find value for parameter:" + parameter.getFullAnnotationName());
                     }
                     retrievedResources.put(fileKey, encodedValue);
+
+                } else if (parameter instanceof CustomParameter) {
+                    //custom params are not encoded at rest, so need to encode value
+                    String encodedValue = Base64.getEncoder().encodeToString(storageProvider.get(storagePrefix, parameter).getBytes());
+                    if (encodedValue == null) {
+                        LOG.info("Couldn't find value for parameter: {}, failing..", fileKey);
+                        throw new RuntimeException("Couldn't find value for parameter:" + parameter.getFullAnnotationName());
+                    }
+                    retrievedSecrets.put(fileKey, encodedValue);
 
                 } else {
                     throw new RuntimeException("Unsupported parameter type");
@@ -201,5 +215,15 @@ public class InitMain {
         properties.load(new FileInputStream(getAnnotationsFile()));
         //if local mode exists and its true
         return properties.containsKey("init." + getAnnotationDomain() + "/local-mode") && ((String) properties.get("init." + getAnnotationDomain() + "/local-mode")).contains("true");
+    }
+
+
+    String getCustomParameter(List<Parameter> parameters, Parameter sourceParameter, String fieldName) {
+        String matchParameter = sourceParameter.getParameterName() + "_" + fieldName;
+        return parameters.stream()
+                .filter(CustomParameter.class::isInstance)
+                .filter(p -> p.getParameterNameWithField().equals(matchParameter))
+                .map(CustomParameter.class::cast)
+                .findFirst().map(CustomParameter::getFixedValue).orElse(null);
     }
 }

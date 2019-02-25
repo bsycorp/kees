@@ -2,6 +2,7 @@ package com.bsycorp.kees;
 
 import com.bsycorp.kees.data.DataProvider;
 import com.bsycorp.kees.data.RandomDataProvider;
+import com.bsycorp.kees.models.CustomParameter;
 import com.bsycorp.kees.models.Parameter;
 import com.bsycorp.kees.models.ResourceParameter;
 import com.bsycorp.kees.models.SecretKindEnum;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.commons.collections4.map.PassiveExpiringMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,19 +116,28 @@ public class CreateMain {
 
                                                 //need special behaviour for RSA as it has two params generated from one call. breaks abstracts and is annoying.
                                                 if (secretParameter.getType() == SecretTypeEnum.RSA) {
-                                                    parameter.overrideFieldName("public");
                                                     String[] encodedValues = dataProvider.generatePairedBase64Encoded(secretParameter.getType(), parameter.getParameterName(), secretParameter.getSize(), secretParameter.getUserId());
+                                                    parameter.overrideFieldName("public");
                                                     storageProvider.put(storagePrefix, parameter, encodedValues[0]);
                                                     parameter.overrideFieldName("private");
                                                     storageProvider.put(storagePrefix, parameter, encodedValues[1]);
+
                                                 } else if (secretParameter.getType() == SecretTypeEnum.GPG) {
-                                                    parameter.overrideFieldName("public");
+                                                    if (secretParameter.getUserId() == null) {
+                                                        secretParameter.setUserId(getCustomParameter(parameters, parameter, "userId"));
+                                                    }
+                                                    secretParameter.setUserId(getCustomParameter(parameters, parameter, "userId"));
                                                     String[] encodedValues = dataProvider.generatePairedBase64Encoded(secretParameter.getType(), parameter.getParameterName(), secretParameter.getSize(), secretParameter.getUserId());
+                                                    parameter.overrideFieldName("public");
                                                     storageProvider.put(storagePrefix, parameter, encodedValues[0]);
                                                     parameter.overrideFieldName("private");
                                                     storageProvider.put(storagePrefix, parameter, encodedValues[1]);
-                                                    parameter.overrideFieldName("password");
+                                                    parameter.overrideFieldName("userId");
                                                     storageProvider.put(storagePrefix, parameter, encodedValues[2]);
+                                                    parameter.overrideFieldName("password");
+                                                    storageProvider.put(storagePrefix, parameter, encodedValues[3]);
+
+
                                                 //TODO extract this out to another secret type
                                                 } else if (secretParameter.getType() == SecretTypeEnum.RANDOM && secretParameter.getParameterName().startsWith("api-key")) {
                                                     String encodedValue = dataProvider.generateBase64Encoded(secretParameter.getType(), parameter.getParameterName(), secretParameter.getSize());
@@ -134,7 +145,6 @@ public class CreateMain {
                                                     storageProvider.put(storagePrefix, parameter, encodedValue);
                                                     parameter.overrideFieldName("provider");
                                                     storageProvider.put(storagePrefix, parameter, encodedValue);
-
 
                                                 } else {
                                                     //otherwise treat as normal value
@@ -147,6 +157,10 @@ public class CreateMain {
 
                                         } else if (parameter instanceof ResourceParameter) {
                                             //ignore as resources can't be generated
+
+
+                                        } else if (parameter instanceof CustomParameter) {
+                                            //ignore as custom parameters can't be generated
 
                                         } else {
                                             throw new RuntimeException("Unsupported parameter");
@@ -178,6 +192,15 @@ public class CreateMain {
                 watcherLatch.countDown();
             }
 
+            private String getCustomParameter(List<Parameter> parameters, Parameter sourceParameter, String fieldName) {
+                String matchParameter = sourceParameter.getParameterName() + "_" + fieldName;
+                return parameters.stream()
+                        .filter(CustomParameter.class::isInstance)
+                        .filter(p -> p.getParameterNameWithField().equals(matchParameter))
+                        .map(CustomParameter.class::cast)
+                        .findFirst().map(CustomParameter::getFixedValue)
+                        .orElseThrow(() -> new RuntimeException("Unable to find custom parameter " + matchParameter));
+            }
         });
 
         //blocking while watcher is connected

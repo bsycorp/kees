@@ -77,7 +77,7 @@ public class CreateMainTest {
 
     }
 
-    @Test(timeout = 10000)
+    @Test//(timeout = 10000)
     public void shouldFindOneMatchingPod() throws Exception {
         InMemoryStorageProvider storageProvider = new InMemoryStorageProvider();
         createMain.setStorageProvider(storageProvider);
@@ -95,6 +95,10 @@ public class CreateMainTest {
         annotations.put("secret.bsycorp.com/api-key.service-c.v1_provider", "kind=DYNAMIC,type=RANDOM,size=128");
         annotations.put("secret.bsycorp.com/service-d.v1_public", "kind=DYNAMIC,type=RSA,size=2048");
         annotations.put("resource.bsycorp.com/app.db.main.url", "storageKey=db.url,localModeValue=dmFsdWU=");
+        annotations.put("custom.bsycorp.com/common.gpg.v1_userId", "fixedValue=user<user@email.com>");
+        annotations.put("secret.bsycorp.com/common.gpg.v1_private", "kind=DYNAMIC,type=GPG,size=2048");
+        annotations.put("secret.bsycorp.com/common.gpg.v1_public", "kind=DYNAMIC,type=GPG,size=2048");
+        annotations.put("secret.bsycorp.com/common.gpg.v1_password", "kind=DYNAMIC,type=GPG,size=2048");
 
         Pod pod = new PodBuilder()
                 .withNewMetadata()
@@ -122,7 +126,7 @@ public class CreateMainTest {
             Thread.sleep(500);
         }
 
-        //verify we create 12 values and had no exceptions
+        //verify we create 13 values and had no exceptions
         assertTrue(storageProvider.getStore().containsKey("local/service-key.v1_private"));
         assertTrue(storageProvider.getStore().containsKey("local/service-d.v1_private"));
         assertTrue(storageProvider.getStore().containsKey("local/service-key.v1_public"));
@@ -132,11 +136,15 @@ public class CreateMainTest {
         assertTrue(storageProvider.getStore().containsKey("local/api-key.service-c.v1_provider"));
         assertTrue(storageProvider.getStore().containsKey("local/common.thing.v1_private"));
         assertTrue(storageProvider.getStore().containsKey("local/common.thing.v1_public"));
+        assertTrue(storageProvider.getStore().containsKey("local/common.gpg.v1_userId"));
+        assertTrue(storageProvider.getStore().containsKey("local/common.gpg.v1_private"));
+        assertTrue(storageProvider.getStore().containsKey("local/common.gpg.v1_public"));
+        assertTrue(storageProvider.getStore().containsKey("local/common.gpg.v1_password"));
         assertEquals(
                 storageProvider.getStore().containsKey("local/api-key.service-c.v1_consumer"),
                 storageProvider.getStore().containsKey("local/api-key.service-c.v1_provider")
         );
-        assertEquals(9, storageProvider.getStore().size());
+        assertEquals(13, storageProvider.getStore().size());
         assertEquals(false, hadException[0]);
         assertEquals(0, createMain.getExceptionCounter().get());
 

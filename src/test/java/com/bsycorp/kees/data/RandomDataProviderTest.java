@@ -21,12 +21,12 @@ public class RandomDataProviderTest {
         final Object[] signer = DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.GPG, "app.key.signer", 2048, signerUserId);
         String signerPublic = (String)signer[0];
         String signerPrivate =(String)signer[1];
-        String signerPassword = new String(DECODER.decode((String) signer[2]));
+        String signerPassword = new String(DECODER.decode((String) signer[3]));
 
         final Object[] decrypter1 = DATA_PROVIDER.generatePairedBase64Encoded(SecretTypeEnum.GPG, "app.key.decrypter", 2048, decrypterUserId);
         String decrypterPublic = (String)decrypter1[0];
         String decrypterPrivate = (String)decrypter1[1];
-        String decrypterPassword = new String(DECODER.decode((String) decrypter1[2]));
+        String decrypterPassword = new String(DECODER.decode((String) decrypter1[3]));
 
         final byte[] raw = "This is a test string".getBytes();
 

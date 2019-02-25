@@ -34,10 +34,7 @@ public class SecretParameter extends Parameter {
         setLocalValue(rawInput, rawInput.getProperty("localModeValue"));
         if (type == SecretTypeEnum.GPG) {
             setUserId(rawInput.getProperty("userId"));
-            if (null == userId) {
-                throw new RuntimeException("userId must be defined");
-            }
-            if (!Pattern.compile(".+<.+>").matcher(userId).matches()) {
+            if (userId != null  && !Pattern.compile(".+<.+>").matcher(userId).matches()) {
                 throw new RuntimeException("userId must be of the form \"userId<email>\"");
             }
         }

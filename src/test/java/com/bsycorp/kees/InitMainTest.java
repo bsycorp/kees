@@ -89,6 +89,22 @@ public class InitMainTest {
         Assert.assertEquals("SmRGbU5tSUh0MjhZc3RXcQ==", props.getProperty("common.gpg.v1_password"));
     }
 
+    @Test
+    public void shouldBeSuccessfulForGPGCustomAnnotations() throws Exception {
+        init("annotations-custom-gpg.txt");
+
+        InitMain.main();
+
+        final String result = FileUtils.readFileToString(tempSecretsFile, "UTF-8");
+        final Properties props = new Properties();
+        props.load(new ByteArrayInputStream(result.getBytes()));
+
+        Assert.assertNotNull(props.getProperty("common.gpg.v1_private"));
+        Assert.assertNotNull(props.getProperty("common.gpg.v1_public"));
+        Assert.assertEquals("SmRGbU5tSUh0MjhZc3RXcQ==", props.getProperty("common.gpg.v1_password"));
+        Assert.assertEquals("dXNlcjx1c2VyQGVtYWlsLmNvbT4=", props.getProperty("common.gpg.v1_userId"));
+    }
+
     @Test(expected = Exception.class)
     public void shouldBeUnsuccessful() throws Exception {
         FileUtils.copyFile(new File(InitMainTest.class.getClassLoader().getResource("annotations-malformed.txt").getFile()), tempAnnotationsFile);

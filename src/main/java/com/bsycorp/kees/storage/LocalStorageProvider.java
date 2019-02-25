@@ -1,6 +1,7 @@
 package com.bsycorp.kees.storage;
 
 import com.bsycorp.kees.data.DeterministicDataProvider;
+import com.bsycorp.kees.models.CustomParameter;
 import com.bsycorp.kees.models.Parameter;
 import com.bsycorp.kees.models.ResourceParameter;
 import com.bsycorp.kees.models.SecretParameter;
@@ -24,7 +25,7 @@ public class LocalStorageProvider implements StorageProvider {
                 return secretParameter.getLocalValue();
 
             } else if (secretParameter.getType() == SecretTypeEnum.GPG && secretParameter.getFieldName().equals("password")) {
-                return dataProvider.generatePairedBase64Encoded(secretParameter.getType(), secretParameter.getParameterName(), secretParameter.getSize(), secretParameter.getUserId())[2];
+                return dataProvider.generatePairedBase64Encoded(secretParameter.getType(), secretParameter.getParameterName(), secretParameter.getSize(), secretParameter.getUserId())[3];
             } else if ((secretParameter.getType() == SecretTypeEnum.RSA || secretParameter.getType() == SecretTypeEnum.GPG)
                     && secretParameter.getFieldName().equals("public")) {
                 return dataProvider.generatePairedBase64Encoded(secretParameter.getType(), secretParameter.getParameterName(), secretParameter.getSize(), secretParameter.getUserId())[0];
@@ -41,6 +42,14 @@ public class LocalStorageProvider implements StorageProvider {
                 return resourceParameter.getLocalValue();
             } else {
                 throw new RuntimeException("Can't generate value for resource parameter locally");
+            }
+
+        } else if (parameter instanceof CustomParameter) {
+            CustomParameter customParameter = (CustomParameter) parameter;
+            if (customParameter.getFixedValue() != null) {
+                return customParameter.getFixedValue();
+            } else {
+                throw new RuntimeException("Can't generate value for custom parameter locally");
             }
 
         } else {
