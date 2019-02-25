@@ -126,7 +126,6 @@ public class CreateMain {
                                                     if (secretParameter.getUserId() == null) {
                                                         secretParameter.setUserId(getCustomParameter(parameters, parameter, "userId"));
                                                     }
-                                                    secretParameter.setUserId(getCustomParameter(parameters, parameter, "userId"));
                                                     String[] encodedValues = dataProvider.generatePairedBase64Encoded(secretParameter.getType(), parameter.getParameterName(), secretParameter.getSize(), secretParameter.getUserId());
                                                     parameter.overrideFieldName("public");
                                                     storageProvider.put(storagePrefix, parameter, encodedValues[0]);
@@ -136,7 +135,6 @@ public class CreateMain {
                                                     storageProvider.put(storagePrefix, parameter, encodedValues[2]);
                                                     parameter.overrideFieldName("password");
                                                     storageProvider.put(storagePrefix, parameter, encodedValues[3]);
-
 
                                                 //TODO extract this out to another secret type
                                                 } else if (secretParameter.getType() == SecretTypeEnum.RANDOM && secretParameter.getParameterName().startsWith("api-key")) {
