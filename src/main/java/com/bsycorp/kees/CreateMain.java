@@ -38,7 +38,7 @@ public class CreateMain {
     private AtomicInteger exceptionCounter = new AtomicInteger();
     private AtomicInteger eventCounter = new AtomicInteger();
 
-    private Map<String, String> expiryingCache = new PassiveExpiringMap<>(60000);
+    private Map<String, String> expiringCache = new PassiveExpiringMap<>(60000);
 
     public static void main(String... argv) throws Exception {
         CreateMain main = new CreateMain();
@@ -49,7 +49,7 @@ public class CreateMain {
         }
 
         try {
-            main.setStorageProvider(new DynamoDBStorageProvider(Utils.getTableName(Utils.getEnvironment().get("ENV_LABEL"))));
+            main.setStorageProvider(new DynamoDBStorageProvider(Utils.getTableName(envLabel)));
             main.run();
         } catch (Exception e) {
             LOG.error("Error in execution", e);
@@ -99,7 +99,7 @@ public class CreateMain {
                             for (Parameter parameter : parameters) {
                                 try {
                                     //if we have processed this param recently then skip!
-                                    if (expiryingCache.containsKey(parameter.getParameterNameWithField())) {
+                                    if (expiringCache.containsKey(parameter.getParameterNameWithField())) {
                                         LOG.info("Skipping parameter {} as already exists in processed cache..", parameter.getParameterName());
                                         continue;
                                     }
@@ -142,7 +142,7 @@ public class CreateMain {
                                                 }
 
                                                 LOG.info("Created value for {}", parameter.getParameterName());
-                                                expiryingCache.put(parameter.getParameterNameWithField(), "success");
+                                                expiringCache.put(parameter.getParameterNameWithField(), "success");
                                             }
 
                                         } else if (parameter instanceof ResourceParameter) {
