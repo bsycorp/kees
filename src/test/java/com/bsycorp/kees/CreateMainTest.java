@@ -1,5 +1,14 @@
 package com.bsycorp.kees;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import com.bsycorp.kees.storage.InMemoryStorageProvider;
 import com.bsycorp.kees.storage.SSMStorageProvider;
 import com.bsycorp.kees.storage.StorageProvider;
@@ -7,20 +16,14 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.WatchEvent;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
 
 public class CreateMainTest {
 
@@ -40,6 +43,11 @@ public class CreateMainTest {
         storageProvider = mock(SSMStorageProvider.class);
         createMain.setStorageProvider(storageProvider);
         reset(storageProvider);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        createMain.shutdown();
     }
 
     @Test(timeout = 10000)

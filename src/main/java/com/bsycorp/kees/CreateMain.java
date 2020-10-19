@@ -1,5 +1,7 @@
 package com.bsycorp.kees;
 
+import static com.bsycorp.kees.Utils.getAnnotationDomain;
+
 import com.bsycorp.kees.data.DataProvider;
 import com.bsycorp.kees.data.RandomDataProvider;
 import com.bsycorp.kees.models.Parameter;
@@ -13,18 +15,16 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
-
+import org.apache.commons.collections4.map.PassiveExpiringMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.commons.collections4.map.PassiveExpiringMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import static com.bsycorp.kees.Utils.getAnnotationDomain;
 
 public class CreateMain {
 
@@ -37,6 +37,8 @@ public class CreateMain {
     private AnnotationParser annotationParser = new AnnotationParser();
     private AtomicInteger exceptionCounter = new AtomicInteger();
     private AtomicInteger eventCounter = new AtomicInteger();
+    private Watch watch = null;
+    final CountDownLatch watcherLatch = new CountDownLatch(1);
 
     private Map<String, String> expiringCache = new PassiveExpiringMap<>(60000);
 
@@ -59,7 +61,6 @@ public class CreateMain {
 
     public void run() throws Exception {
         LOG.info("Starting creator process..");
-        final CountDownLatch watcherLatch = new CountDownLatch(1);
 
         //watch pods
         if (client == null) {
@@ -67,7 +68,7 @@ public class CreateMain {
             client = new DefaultKubernetesClient();
         }
 
-        client.pods().inAnyNamespace().watch(new Watcher<Pod>() {
+        watch = client.pods().inAnyNamespace().watch(new Watcher<Pod>() {
 
             @Override
             public synchronized void eventReceived(Action action, Pod resource) {
@@ -182,6 +183,11 @@ public class CreateMain {
 
         //blocking while watcher is connected
         watcherLatch.await();
+    }
+
+    public void shutdown() {
+        watch.close();
+        watcherLatch.countDown();
     }
 
     public void setClient(KubernetesClient client) {
