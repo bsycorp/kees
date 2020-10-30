@@ -49,6 +49,7 @@ graal {
 //    option '-H:+PrintMethodHistogram'
 //    option '-H:+PrintRuntimeCompileMethods'
 //    option '-H:Log=registerResource:'
+    option '-H:ReflectionConfigurationFiles=../base/src/main/resources/reflect-config.json'
     option '--enable-http'
     option '--enable-https'
     option '--allow-incomplete-classpath'
