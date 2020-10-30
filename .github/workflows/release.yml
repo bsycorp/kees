@@ -18,4 +18,7 @@ jobs:
           architecture: x64 # (x64 or x86) - defaults to x64
       - run: |
           chmod +x *.sh
+          export BINTRAY_USER=${{ secrets.BINTRAY_USER }}
+          export BINTRAY_KEY=${{ secrets.BINTRAY_KEY }}
+          echo ${{ secrets.DOCKERPASS }} | docker login -u ${{ secrets.DOCKERUSER }} --password-stdin
           ./deploy.sh
