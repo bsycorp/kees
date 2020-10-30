@@ -802,28 +802,40 @@
     ]
   },
   {
-    "name": "software.amazon.awssdk.auth.credentials.AwsCredentialsProvider",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "software.amazon.awssdk.services.sts.auth.StsAssumeRoleWithWebIdentityCredentialsProvider",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
+    "name": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider",
+    "fields": [
+      {
+        "name": "credentialsProvider"
+      }
+    ]
   },
   {
     "name": "software.amazon.awssdk.services.sts.auth.StsCredentialsProvider",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
+    "fields": [
+      {
+        "name": "stsClient"
+      }
+    ]
   },
   {
-    "name": "software.amazon.awssdk.services.sts.StsClient",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
+    "name": "software.amazon.awssdk.services.sts.internal.StsWebIdentityCredentialsProviderFactory",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "software.amazon.awssdk.services.sts.internal.StsWebIdentityCredentialsProviderFactory$StsWebIdentityCredentialsProvider",
+    "fields": [
+      {
+        "name": "credentialsProvider"
+      },
+      {
+        "name": "stsClient"
+      }
+    ]
   },
   {
     "name": "sun.security.provider.SecureRandom",
