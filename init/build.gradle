@@ -82,6 +82,8 @@ graal {
 //    option '-H:+PrintMethodHistogram'
 //    option '-H:+PrintRuntimeCompileMethods'
 //    option '-H:Log=registerResource:'
+    option '--enable-http'
+    option '--enable-https'
     option '--allow-incomplete-classpath'
     option '--report-unsupported-elements-at-runtime'
     option '--install-exit-handlers'
