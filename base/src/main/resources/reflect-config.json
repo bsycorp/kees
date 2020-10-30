@@ -797,7 +797,8 @@
     "name": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider",
     "fields": [
       {
-        "name": "credentialsProvider"
+        "name": "credentialsProvider",
+        "allowWrite": true
       }
     ]
   },
@@ -805,7 +806,8 @@
     "name": "software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider",
     "fields": [
       {
-        "name": "credentialsProvider"
+        "name": "credentialsProvider",
+        "allowWrite": true
       }
     ]
   },
@@ -813,7 +815,8 @@
     "name": "software.amazon.awssdk.services.sts.auth.StsCredentialsProvider",
     "fields": [
       {
-        "name": "stsClient"
+        "name": "stsClient",
+        "allowWrite": true
       }
     ]
   },
@@ -830,10 +833,12 @@
     "name": "software.amazon.awssdk.services.sts.internal.StsWebIdentityCredentialsProviderFactory$StsWebIdentityCredentialsProvider",
     "fields": [
       {
-        "name": "credentialsProvider"
+        "name": "credentialsProvider",
+        "allowWrite": true
       },
       {
-        "name": "stsClient"
+        "name": "stsClient",
+        "allowWrite": true
       }
     ]
   },
