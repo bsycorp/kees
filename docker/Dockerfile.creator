@@ -1,6 +1,0 @@
-FROM bitnami/java:1.8-prod
-ADD https://github.com/use-sparingly/keyutil/releases/download/0.4.0/keyutil-0.4.0.jar /keyutil.jar
-ADD docker/certs.sh /certs.sh
-ADD build/libs/kees-all.jar /app.jar
-ENTRYPOINT ["/certs.sh"]
-CMD ["java", "-cp", "/app.jar", "com.bsycorp.kees.CreateMain"]

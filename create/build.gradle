@@ -1,0 +1,60 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath "gradle.plugin.com.palantir.graal:gradle-graal:0.7.1"
+        classpath "com.google.gradle:osdetector-gradle-plugin:1.6.2"
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+}
+
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: com.palantir.gradle.graal.GradleGraalPlugin
+apply plugin: com.google.gradle.osdetector.OsDetectorPlugin
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+group = 'com.bsycorp'
+if (findProperty("appVersion") != null){
+    version = findProperty("appVersion")
+}
+
+dependencies {
+    compile(project(":base"))
+    compile "org.apache.commons:commons-collections4:4.1"
+    // ideally would use the official client but it looks very immature - compile "io.kubernetes:client-java:0.2"
+    compile "io.fabric8:kubernetes-client:4.12.0" //this one looks better.
+
+    testCompile "junit:junit:4.11"
+    testCompile "org.mockito:mockito-core:1.8.4"
+    testCompile "io.fabric8:kubernetes-server-mock:4.12.0"
+}
+
+def nativeImageOutput = "kees-create-${osdetector.classifier}"
+graal {
+    mainClass 'com.bsycorp.kees.CreateMain'
+    outputName nativeImageOutput
+    graalVersion "20.2.0"
+    javaVersion JavaVersion.VERSION_1_8.majorVersion
+//    option '-H:+PrintMethodHistogram'
+//    option '-H:+PrintRuntimeCompileMethods'
+//    option '-H:Log=registerResource:'
+    option '--allow-incomplete-classpath'
+    option '--report-unsupported-elements-at-runtime'
+    option '--install-exit-handlers'
+    option '--no-server'
+    option '--no-fallback'
+    option '--verbose'
+    option '-J-Dfile.encoding=UTF-8'
+    option '-J-Xmx2g' //bound memory so it is of a consistent size may need to increase over time
+}

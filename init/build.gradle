@@ -1,0 +1,78 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.2'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
+        classpath "gradle.plugin.com.palantir.graal:gradle-graal:0.7.1"
+        classpath "com.google.gradle:osdetector-gradle-plugin:1.6.2"
+    }
+}
+
+apply plugin: 'com.jfrog.bintray'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+}
+
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: com.palantir.gradle.graal.GradleGraalPlugin
+apply plugin: com.google.gradle.osdetector.OsDetectorPlugin
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+group = 'com.bsycorp'
+if (findProperty("appVersion") != null){
+    version = findProperty("appVersion")
+}
+
+dependencies {
+    compile(project(":base"))
+
+    testCompile "junit:junit:4.11"
+    testCompile "org.mockito:mockito-core:1.8.4"
+    testCompile "com.github.stefanbirkner:system-rules:1.17.0"
+}
+
+jar {
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude 'logback.xml'
+
+    manifest {
+        attributes 'Main-Class': 'com.bsycorp.kees.InitMain'
+    }
+}
+
+shadowJar {
+    archiveFileName = "kees-init-all.jar"
+}
+
+def nativeImageOutput = "kees-init-${osdetector.classifier}"
+graal {
+    mainClass 'com.bsycorp.kees.InitMain'
+    outputName nativeImageOutput
+    graalVersion "20.2.0"
+    javaVersion JavaVersion.VERSION_1_8.majorVersion
+    option '-H:IncludeResources=.*keys.json$'
+//    option '-H:+PrintMethodHistogram'
+//    option '-H:+PrintRuntimeCompileMethods'
+//    option '-H:Log=registerResource:'
+    option '--allow-incomplete-classpath'
+    option '--report-unsupported-elements-at-runtime'
+    option '--install-exit-handlers'
+    option '--no-server'
+    option '--no-fallback'
+    option '--verbose'
+    option '-J-Dfile.encoding=UTF-8'
+    option '-J-Xmx2g' //bound memory so it is of a consistent size may need to increase over time
+}
