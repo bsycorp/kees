@@ -2,11 +2,10 @@ package com.bsycorp.kees;
 
 import java.io.ByteArrayInputStream;
 import java.util.Properties;
+import com.bsycorp.kees.models.ModeEnum;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
@@ -110,7 +109,7 @@ public class InitMainTest {
         environmentVariables.set("ANNOTATIONS_FILE", annotationsFile.getAbsolutePath());
 
         assertEquals(annotationsFile.getAbsolutePath(), initMain.getAnnotationsFile().getAbsolutePath());
-        assertEquals(true, initMain.isLocalMode());
+        assertEquals(ModeEnum.LOCAL, initMain.getMode());
         assertEquals("/bsycorp/staging", new InitMain().getStoragePrefix());
     }
 }

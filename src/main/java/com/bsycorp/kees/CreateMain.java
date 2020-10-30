@@ -1,6 +1,7 @@
 package com.bsycorp.kees;
 
 import static com.bsycorp.kees.Utils.getAnnotationDomain;
+import static com.bsycorp.kees.Utils.setupProxyProperties;
 
 import com.bsycorp.kees.data.DataProvider;
 import com.bsycorp.kees.data.RandomDataProvider;
@@ -43,6 +44,7 @@ public class CreateMain {
     private Map<String, String> expiringCache = new PassiveExpiringMap<>(60000);
 
     public static void main(String... argv) throws Exception {
+        setupProxyProperties();
         CreateMain main = new CreateMain();
 
         String envLabel = Utils.getEnvironment().get("ENV_LABEL");

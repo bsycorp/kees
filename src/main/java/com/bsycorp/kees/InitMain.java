@@ -1,12 +1,18 @@
 package com.bsycorp.kees;
 
+import static com.bsycorp.kees.Utils.getAnnotationDomain;
+import static com.bsycorp.kees.Utils.setupProxyProperties;
+
+import com.bsycorp.kees.models.ModeEnum;
 import com.bsycorp.kees.models.Parameter;
 import com.bsycorp.kees.models.ResourceParameter;
 import com.bsycorp.kees.models.SecretParameter;
 import com.bsycorp.kees.storage.DynamoDBStorageProvider;
 import com.bsycorp.kees.storage.LocalStorageProvider;
 import com.bsycorp.kees.storage.StorageProvider;
-
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -15,20 +21,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import static com.bsycorp.kees.Utils.getAnnotationDomain;
 
 public class InitMain {
 
     private static Logger LOG = LoggerFactory.getLogger(InitMain.class);
 
-    private StorageProvider storageProvider;
+    private StorageProvider primaryStorageProvider = null;
+    private StorageProvider secondaryStorageProvider = null;
     private AnnotationParser annotationParser = new AnnotationParser();
 
     public static void main(String... argv) throws Exception {
+        setupProxyProperties();
         InitMain main = new InitMain();
         try {
             main.run();
@@ -47,10 +50,11 @@ public class InitMain {
 
         String storagePrefix = getStoragePrefix();
         String tableName = Utils.getTableName(envLabel);
+        ModeEnum mode = getMode();
 
         LOG.info("Starting init process, with configuration: \n\t annotations: {}\n\t local-mode: {}\n\t storage-prefix: {}\n\t secrets-output: {}\n\t resources-output: {} table-name: {}",
                 getAnnotationsFile(),
-                isLocalMode(),
+                mode,
                 storagePrefix,
                 getSecretsFile(),
                 getResourcesFile(),
@@ -58,13 +62,19 @@ public class InitMain {
         );
 
         //check if in local mode, setup providers accordingly
-        if (isLocalMode()) {
-            storageProvider = new LocalStorageProvider();
+        if (mode == ModeEnum.LOCAL) {
+            primaryStorageProvider = new LocalStorageProvider();
+        } else if (mode == ModeEnum.REMOTE_THEN_LOCAL) {
+            if (tableName == null) {
+                throw new Exception("No table name annotation specified");
+            }
+            primaryStorageProvider = new DynamoDBStorageProvider(tableName);
+            secondaryStorageProvider = new LocalStorageProvider();
         } else {
             if (tableName == null) {
                 throw new Exception("No table name annotation specified");
             }
-            storageProvider = new DynamoDBStorageProvider(tableName);
+            primaryStorageProvider = new DynamoDBStorageProvider(tableName);
         }
 
         //parser annotations from podinfo
@@ -79,7 +89,11 @@ public class InitMain {
                 String fileKey = parameter.getParameterNameWithField();
                 if (parameter instanceof SecretParameter) {
                     //secret params are encoded at rest, so get retrieves an encodedValue
-                    String encodedValue = storageProvider.get(storagePrefix, parameter);
+                    String encodedValue = primaryStorageProvider.get(storagePrefix, parameter);
+                    if (encodedValue == null && secondaryStorageProvider != null) {
+                        //if secondary provider configured, try that
+                        encodedValue = secondaryStorageProvider.get(storagePrefix, parameter);
+                    }
                     if (encodedValue == null) {
                         LOG.info("Couldn't find value for parameter: {}, failing..", fileKey);
                         throw new RuntimeException("Couldn't find value for parameter:" + parameter.getFullAnnotationName());
@@ -88,7 +102,11 @@ public class InitMain {
 
                 } else if (parameter instanceof ResourceParameter) {
                     //resource params are encoded at rest, so retrieves an encoded value
-                    String encodedValue = storageProvider.get(storagePrefix, parameter);
+                    String encodedValue = primaryStorageProvider.get(storagePrefix, parameter);
+                    if (encodedValue == null && secondaryStorageProvider != null) {
+                        //if secondary provider configured, try that
+                        encodedValue = secondaryStorageProvider.get(storagePrefix, parameter);
+                    }
                     if (encodedValue == null) {
                         LOG.info("Couldn't find value for parameter: {}, failing..", fileKey);
                         throw new RuntimeException("Couldn't find value for parameter:" + parameter.getFullAnnotationName());
@@ -196,10 +214,21 @@ public class InitMain {
         return resourcesFile;
     }
 
-    boolean isLocalMode() throws IOException {
+    ModeEnum getMode() throws IOException {
         Properties properties = new Properties();
         properties.load(new FileInputStream(getAnnotationsFile()));
         //if local mode exists and its true
-        return properties.containsKey("init." + getAnnotationDomain() + "/local-mode") && ((String) properties.get("init." + getAnnotationDomain() + "/local-mode")).contains("true");
+        String localMode = ((String) properties.get("init." + getAnnotationDomain() + "/local-mode"));
+        if((localMode.startsWith("\"") && localMode.endsWith("\"")) ||
+                (localMode.startsWith("\'") && localMode.endsWith("\'"))) {
+            localMode = localMode.substring(1, localMode.length()-1);
+        }
+        if ("true".equals(localMode.trim())) {
+            return ModeEnum.LOCAL;
+        } else if ("remote-then-local".equals(localMode.trim())) {
+            return ModeEnum.REMOTE_THEN_LOCAL;
+        } else {
+            return ModeEnum.REMOTE;
+        }
     }
 }

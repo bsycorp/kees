@@ -1,29 +1,28 @@
 package com.bsycorp.kees.storage;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
-import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
-import com.amazonaws.services.dynamodbv2.model.GetItemResult;
-import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
-import com.amazonaws.services.dynamodbv2.model.QueryRequest;
-import com.amazonaws.services.dynamodbv2.model.QueryResult;
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.bsycorp.kees.Utils;
 import com.bsycorp.kees.models.Parameter;
-
-import java.util.HashMap;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
+import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class DynamoDBStorageProvider implements StorageProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(DynamoDBStorageProvider.class);
 
     public final String  tableName;
-    private final AmazonDynamoDB client = Utils.getDDBClient();
+    private final DynamoDbClient client = Utils.getDDBClient();
 
     public DynamoDBStorageProvider(String tableName) {
         this.tableName = tableName;
@@ -36,14 +35,15 @@ public class DynamoDBStorageProvider implements StorageProvider {
 
         try {
             Map<String, AttributeValue> values = new HashMap<>();
-            values.put("secretName", new AttributeValue(ssmPath));
-            values.put("secretValue", new AttributeValue(value));
+            values.put("secretName", AttributeValue.builder().s(ssmPath).build());
+            values.put("secretValue", AttributeValue.builder().s(value).build());
             client.putItem(
-                    new PutItemRequest()
-                            .withTableName(tableName)
-                            .withItem(values)
+                    PutItemRequest.builder()
+                            .tableName(tableName)
+                            .item(values)
                             //do this to mimic default SSM behaviour where it won't overwrite
-                            .withConditionExpression("attribute_not_exists(secretName)")
+                            .conditionExpression("attribute_not_exists(secretName)")
+                            .build()
             );
             //success!
             LOG.info("Set DDB parameter and value for key: {}", ssmPath);
@@ -52,7 +52,7 @@ public class DynamoDBStorageProvider implements StorageProvider {
             //item already exists
             LOG.warn("Item already exists for key, ignoring new value: {}", ssmPath);
 
-        } catch (AmazonDynamoDBException e) {
+        } catch (DynamoDbException e) {
             //had error finding value, could be missing or invalid or error
             LOG.error("Error when setting item for key: " + ssmPath, e);
         }
@@ -66,19 +66,19 @@ public class DynamoDBStorageProvider implements StorageProvider {
 
         try {
             Map<String, AttributeValue> itemKey = new HashMap<>();
-            itemKey.put("secretName", new AttributeValue(ssmPath));
-            GetItemResult result = client.getItem(new GetItemRequest().withTableName(tableName).withKey(itemKey));
-            if (result.getItem() == null){
+            itemKey.put("secretName", AttributeValue.builder().s(ssmPath).build());
+            GetItemResponse result = client.getItem(GetItemRequest.builder().tableName(tableName).key(itemKey).build());
+            if (!result.hasItem()){
                 LOG.warn("Couldn't find item for key: {}", ssmPath);
                 return null;
             }
-            return result.getItem().get("secretValue").getS();
+            return result.item().get("secretValue").s();
 
         } catch (ResourceNotFoundException e) {
             LOG.warn("Couldn't find item for key: {}", ssmPath);
             return null;
 
-        } catch (AmazonDynamoDBException e) {
+        } catch (DynamoDbException e) {
             //had error finding value, could be missing or invalid or error
             LOG.error("Error when looking up parameter with key: " + ssmPath, e);
             return null;
@@ -92,17 +92,19 @@ public class DynamoDBStorageProvider implements StorageProvider {
 
         try {
             Map<String, AttributeValue> eav = new HashMap<>();
-            eav.put(":name", new AttributeValue().withS(ssmPath));
+            eav.put(":name", AttributeValue.builder().s(ssmPath).build());
 
-            QueryResult result = client.query(
-                new QueryRequest().withTableName(tableName)
-                    .withKeyConditionExpression("secretName =:name")
-                    .withExpressionAttributeValues(eav)
-                    .withProjectionExpression("secretName")
+            QueryResponse result = client.query(
+                    QueryRequest.builder()
+                    .tableName(tableName)
+                    .keyConditionExpression("secretName =:name")
+                    .expressionAttributeValues(eav)
+                    .projectionExpression("secretName")
+                    .build()
             );
-            return result.getCount().intValue() > 0;
+            return result.count().intValue() > 0;
 
-        } catch (AmazonDynamoDBException e) {
+        } catch (DynamoDbException e) {
             //had error finding value, could be missing or invalid or error
             LOG.error("Error when looking up parameter with key: " + ssmPath, e);
             return false;
