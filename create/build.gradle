@@ -30,7 +30,7 @@ if (findProperty("appVersion") != null){
 }
 
 dependencies {
-    compile(project(":base"))
+    compile(project(":kees"))
     compile "org.apache.commons:commons-collections4:4.1"
     // ideally would use the official client but it looks very immature - compile "io.kubernetes:client-java:0.2"
     compile "io.fabric8:kubernetes-client:4.12.0" //this one looks better.
