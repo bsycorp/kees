@@ -23,26 +23,25 @@ apply plugin: 'maven'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
-group = 'com.bsycorp'
+group = 'com.bsycorp.kees'
 if (findProperty("appVersion") != null){
     version = findProperty("appVersion")
 }
 
 dependencies {
-    compile(platform("software.amazon.awssdk:bom:2.13.72"))
-    compile("software.amazon.awssdk:ssm") {
+    compile("software.amazon.awssdk:ssm:2.13.72") {
         exclude group: "software.amazon.awssdk", module: "netty-nio-client"
         exclude group: "software.amazon.awssdk", module: "apache-client"
     }
-    compile("software.amazon.awssdk:sts") {
+    compile("software.amazon.awssdk:sts:2.13.72") {
         exclude group: "software.amazon.awssdk", module: "netty-nio-client"
         exclude group: "software.amazon.awssdk", module: "apache-client"
     }
-    compile("software.amazon.awssdk:dynamodb") {
+    compile("software.amazon.awssdk:dynamodb:2.13.72") {
         exclude group: "software.amazon.awssdk", module: "netty-nio-client"
         exclude group: "software.amazon.awssdk", module: "apache-client"
     }
-    compile("software.amazon.awssdk:url-connection-client")
+    compile("software.amazon.awssdk:url-connection-client:2.13.72")
     compile 'org.yaml:snakeyaml:1.20'
     compile "org.slf4j:slf4j-api:1.7.25"
     compile "org.slf4j:slf4j-simple:1.7.25"

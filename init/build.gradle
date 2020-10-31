@@ -27,13 +27,13 @@ apply plugin: com.google.gradle.osdetector.OsDetectorPlugin
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
-group = 'com.bsycorp'
+group = 'com.bsycorp.kees'
 if (findProperty("appVersion") != null){
     version = findProperty("appVersion")
 }
 
 dependencies {
-    compile(project(":kees"))
+    compile(project(":base"))
 
     testCompile "junit:junit:4.11"
     testCompile "org.mockito:mockito-core:1.8.4"

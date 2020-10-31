@@ -24,13 +24,13 @@ apply plugin: com.google.gradle.osdetector.OsDetectorPlugin
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
-group = 'com.bsycorp'
+group = 'com.bsycorp.kees'
 if (findProperty("appVersion") != null){
     version = findProperty("appVersion")
 }
 
 dependencies {
-    compile(project(":kees"))
+    compile(project(":base"))
     compile "org.apache.commons:commons-collections4:4.1"
     // ideally would use the official client but it looks very immature - compile "io.kubernetes:client-java:0.2"
     compile "io.fabric8:kubernetes-client:4.12.0" //this one looks better.

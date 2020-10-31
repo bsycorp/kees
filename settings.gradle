@@ -1,4 +1,3 @@
 include 'base'
-project(":base").name = "kees"
 include 'init'
 include 'create'
