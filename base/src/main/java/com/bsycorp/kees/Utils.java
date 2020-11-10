@@ -134,17 +134,16 @@ public class Utils {
 
     public static DynamoDbClient getDDBClient() {
         String awsEndpoint = getEnvironment().get("AWS_ENDPOINT");
-        URI overrideEndpoint = null;
-        try {
-            overrideEndpoint = new URI(awsEndpoint);
-        } catch (URISyntaxException e) {
-            LOG.warn("Ignoring invalid endpoint: {}", awsEndpoint);
-        }
 
         DynamoDbClientBuilder builder = DynamoDbClient.builder();
         builder.credentialsProvider(getCredentialsProvider());
-        if (awsEndpoint!=null) {
-            builder.endpointOverride(overrideEndpoint);
+        if (awsEndpoint != null) {
+            try {
+                builder.endpointOverride(new URI(awsEndpoint));
+            } catch (URISyntaxException e) {
+                LOG.warn("Ignoring invalid endpoint: {}", awsEndpoint);
+                builder.region(getCloudRegion());
+            }
         } else {
             builder.region(getCloudRegion());
         }
