@@ -14,6 +14,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.SsmClientBuilder;
 import software.amazon.awssdk.services.sts.StsClient;
+
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -115,17 +116,16 @@ public class Utils {
 
     public static SsmClient getSSMClient() {
         String awsEndpoint = getEnvironment().get("AWS_ENDPOINT");
-        URI overrideEndpoint = null;
-        try {
-            overrideEndpoint = new URI(awsEndpoint);
-        } catch (URISyntaxException e) {
-            LOG.warn("Ignoring invalid endpoint: {}", awsEndpoint);
-        }
 
         SsmClientBuilder builder = SsmClient.builder();
         builder.credentialsProvider(getCredentialsProvider());
-        if (awsEndpoint!=null) {
-            builder.endpointOverride(overrideEndpoint);
+        if (awsEndpoint != null) {
+            try {
+                builder.endpointOverride(new URI(awsEndpoint));
+            } catch (URISyntaxException e) {
+                LOG.warn("Ignoring invalid endpoint: {}", awsEndpoint);
+                builder.region(getCloudRegion());
+            }
         } else {
             builder.region(getCloudRegion());
         }
@@ -134,17 +134,16 @@ public class Utils {
 
     public static DynamoDbClient getDDBClient() {
         String awsEndpoint = getEnvironment().get("AWS_ENDPOINT");
-        URI overrideEndpoint = null;
-        try {
-            overrideEndpoint = new URI(awsEndpoint);
-        } catch (URISyntaxException e) {
-            LOG.warn("Ignoring invalid endpoint: {}", awsEndpoint);
-        }
 
         DynamoDbClientBuilder builder = DynamoDbClient.builder();
         builder.credentialsProvider(getCredentialsProvider());
-        if (awsEndpoint!=null) {
-            builder.endpointOverride(overrideEndpoint);
+        if (awsEndpoint != null) {
+            try {
+                builder.endpointOverride(new URI(awsEndpoint));
+            } catch (URISyntaxException e) {
+                LOG.warn("Ignoring invalid endpoint: {}", awsEndpoint);
+                builder.region(getCloudRegion());
+            }
         } else {
             builder.region(getCloudRegion());
         }
