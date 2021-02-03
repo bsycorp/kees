@@ -1,22 +1,20 @@
 package com.bsycorp.kees.models;
 
-import org.junit.Test;
-
-import java.io.IOException;
-
 import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
+import java.io.IOException;
 
 public class SecretParameterTest {
 
-    //SSM Path
     @Test
-    public void shouldGiveCorrectSSMPath() throws IOException {
+    public void shouldGiveCorrectPath() throws IOException {
         SecretParameter parameter = (SecretParameter) Parameter.construct("secret.bsycorp.com/service-a.api-key", "kind=DYNAMIC,type=RANDOM,size=128");
         assertEquals("/storage/prefix/service-a.api-key", parameter.getStorageFullPath("/storage/prefix/"));
     }
 
     @Test
-    public void shouldGiveCorrectSSMPathWithStorageKey() throws IOException {
+    public void shouldGiveCorrectPathWithStorageKey() throws IOException {
         SecretParameter parameter = new SecretParameter("secret.bsycorp.com/service-a.api-key", "kind=DYNAMIC,type=RANDOM,size=128,storageKey=app.key");
         assertEquals("/storage/smth/app.key", parameter.getStorageFullPath("/storage/smth/"));
     }

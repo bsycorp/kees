@@ -11,12 +11,17 @@ public class LocalStorageProvider implements StorageProvider {
     private DeterministicDataProvider dataProvider = new DeterministicDataProvider();
 
     @Override
-    public void put(String storagePrefix, Parameter key, String value) {
+    public void put(String storagePrefix, Parameter key, String value, Boolean ignorePutFailure) {
         //noop
     }
 
     @Override
-    public String get(String storagePrefix, Parameter parameter) {
+    public void delete(String storagePrefix, Parameter key, String expectedValue) {
+        //noop
+    }
+
+    @Override
+    public String getValueByKey(String storagePrefix, Parameter parameter) {
         if (parameter instanceof SecretParameter) {
             SecretParameter secretParameter = (SecretParameter) parameter;
             if (secretParameter.getLocalValue() != null) {
@@ -46,6 +51,14 @@ public class LocalStorageProvider implements StorageProvider {
         } else {
             throw new RuntimeException("Unsupported parameter type: " + parameter.getClass());
         }
+    }
+
+    @Override
+    public String getKeyByParameterAndValue(String storagePrefix, Parameter parameter, String value) {
+        byte[] bytes = dataProvider.generateRaw(SecretTypeEnum.RANDOM, storagePrefix + "/" + value, 3*8);
+        int index = Byte.toUnsignedInt(bytes[0]) + Byte.toUnsignedInt(bytes[1]) + Byte.toUnsignedInt(bytes[2]);
+        //generate 3 byte of deterministic entropy from path
+        return parameter.getStorageFullPath(storagePrefix) + "." + index;
     }
 
     @Override

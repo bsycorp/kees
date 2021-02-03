@@ -19,11 +19,11 @@ public class DynamoDBStorageProviderTest {
         System.out.println("Exists Parameter: " + parameter.getStorageFullPath("test") + " - " + exists);
         assertEquals(false, exists);
 
-        String getResult = provider.get("test", parameter);
+        String getResult = provider.getValueByKey("test", parameter);
         System.out.println("Get Parameter: " + parameter.getStorageFullPath("test") + " - '" + getResult + "'");
         assertEquals(null, getResult);
         
-        provider.put("test", parameter, "newer secret value!!!");
+        provider.put("test", parameter, "newer secret value!!!", true);
         System.out.println("PutParameter: " + parameter.getStorageFullPath("test"));
 
         //create done
@@ -31,7 +31,7 @@ public class DynamoDBStorageProviderTest {
         System.out.println("Exists 2 Parameter: " + parameter.getStorageFullPath("test") + " - " + exists);
         assertEquals(true, exists);
 
-        getResult = provider.get("test", parameter);
+        getResult = provider.getValueByKey("test", parameter);
         System.out.println("Get 2 Parameter: " + parameter.getStorageFullPath("test") + " - '" + getResult + "'");
         assertEquals(null, getResult);
     }

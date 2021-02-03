@@ -22,6 +22,8 @@ public class InitMainTest {
     private static File tempSecretsFile;
     private static File tempResourcesFile;
     private static String tempResourcesFilePath;
+    private static File tempLeasesFile;
+    private static String tempLeasesFilePath;
 
     private void init(String originalAnnotationFileName) throws Exception {
         String originalAnnotationFilePath = InitMainTest.class.getClassLoader().getResource(originalAnnotationFileName).getFile();
@@ -36,13 +38,21 @@ public class InitMainTest {
 
         tempResourcesFilePath = tempResourcesFile.getParentFile().getPath();
 
+        tempLeasesFile = File.createTempFile("leases", ".properties");
+        tempLeasesFile.deleteOnExit();
+
+        tempLeasesFilePath = tempLeasesFile.getParentFile().getPath();
+
         environmentVariables.set("ANNOTATIONS_FILE", tempAnnotationsFile.getAbsolutePath());
         FileUtils.copyFile(new File(originalAnnotationFilePath), tempAnnotationsFile);
 
         environmentVariables.set("SECRETS_FILE", tempSecretsFile.getAbsolutePath());
         environmentVariables.set("RESOURCES_FILE", tempResourcesFile.getAbsolutePath());
         environmentVariables.set("RESOURCES_FILE_PATH", tempResourcesFilePath);
+        environmentVariables.set("LEASES_FILE", tempLeasesFile.getAbsolutePath());
+        environmentVariables.set("LEASES_FILE_PATH", tempLeasesFilePath);
         environmentVariables.set("ENV_LABEL", "sml-place");
+        environmentVariables.set("POD_NAME", "test-pod-name");
 
         //overwrite to be sure it hasn't been changed
         FileUtils.copyFile(new File(originalAnnotationFilePath), tempAnnotationsFile);
@@ -62,6 +72,9 @@ public class InitMainTest {
 
         String expectedResources = FileUtils.readFileToString(new File(this.getClass().getClassLoader().getResource("expected-resources.properties").getFile()), "UTF-8");
         assertEquals(expectedResources, FileUtils.readFileToString(tempResourcesFile, "UTF-8"));
+
+        String expectedLeases = FileUtils.readFileToString(new File(this.getClass().getClassLoader().getResource("expected-leases.properties").getFile()), "UTF-8");
+        assertEquals(expectedLeases, FileUtils.readFileToString(tempLeasesFile, "UTF-8"));
 
         String expectedDBResource = FileUtils.readFileToString(new File(this.getClass().getClassLoader().getResource("expected-app.db.main.url").getFile()), "UTF-8");
         assertEquals(expectedDBResource, FileUtils.readFileToString(new File(tempResourcesFilePath + "/app.db.main.url"), "UTF-8"));

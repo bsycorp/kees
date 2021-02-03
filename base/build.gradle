@@ -29,10 +29,6 @@ if (findProperty("appVersion") != null){
 }
 
 dependencies {
-    compile("software.amazon.awssdk:ssm:2.13.72") {
-        exclude group: "software.amazon.awssdk", module: "netty-nio-client"
-        exclude group: "software.amazon.awssdk", module: "apache-client"
-    }
     compile("software.amazon.awssdk:sts:2.13.72") {
         exclude group: "software.amazon.awssdk", module: "netty-nio-client"
         exclude group: "software.amazon.awssdk", module: "apache-client"

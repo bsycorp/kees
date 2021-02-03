@@ -11,8 +11,6 @@ import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
-import software.amazon.awssdk.services.ssm.SsmClient;
-import software.amazon.awssdk.services.ssm.SsmClientBuilder;
 import software.amazon.awssdk.services.sts.StsClient;
 
 import java.lang.reflect.Field;
@@ -112,24 +110,6 @@ public class Utils {
         }
 
         return DefaultCredentialsProvider.create();
-    }
-
-    public static SsmClient getSSMClient() {
-        String awsEndpoint = getEnvironment().get("AWS_ENDPOINT");
-
-        SsmClientBuilder builder = SsmClient.builder();
-        builder.credentialsProvider(getCredentialsProvider());
-        if (awsEndpoint != null) {
-            try {
-                builder.endpointOverride(new URI(awsEndpoint));
-            } catch (URISyntaxException e) {
-                LOG.warn("Ignoring invalid endpoint: {}", awsEndpoint);
-                builder.region(getCloudRegion());
-            }
-        } else {
-            builder.region(getCloudRegion());
-        }
-        return builder.build();
     }
 
     public static DynamoDbClient getDDBClient() {

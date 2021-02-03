@@ -3,6 +3,7 @@ package com.bsycorp.kees;
 import static com.bsycorp.kees.Utils.getAnnotationDomain;
 import static com.bsycorp.kees.Utils.setupProxyProperties;
 
+import com.bsycorp.kees.models.LeaseParameter;
 import com.bsycorp.kees.models.ModeEnum;
 import com.bsycorp.kees.models.Parameter;
 import com.bsycorp.kees.models.ResourceParameter;
@@ -16,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +50,7 @@ public class InitMain {
             throw new Exception("ENV_LABEL is required");
         }
 
+        String podName = Utils.getEnvironment().get("POD_NAME");
         String storagePrefix = getStoragePrefix();
         String tableName = Utils.getTableName(envLabel);
         ModeEnum mode = getMode();
@@ -80,6 +83,7 @@ public class InitMain {
         //parser annotations from podinfo
         Map<String, String> retrievedSecrets = new HashMap<>();
         Map<String, String> retrievedResources = new HashMap<>();
+        Map<String, String> retrievedLeases = new HashMap<>();
 
         boolean hadError = false;
         List<Parameter> parameters = annotationParser.parseFlatFile(getAnnotationsFile());
@@ -89,10 +93,10 @@ public class InitMain {
                 String fileKey = parameter.getParameterNameWithField();
                 if (parameter instanceof SecretParameter) {
                     //secret params are encoded at rest, so get retrieves an encodedValue
-                    String encodedValue = primaryStorageProvider.get(storagePrefix, parameter);
+                    String encodedValue = primaryStorageProvider.getValueByKey(storagePrefix, parameter);
                     if (encodedValue == null && secondaryStorageProvider != null) {
                         //if secondary provider configured, try that
-                        encodedValue = secondaryStorageProvider.get(storagePrefix, parameter);
+                        encodedValue = secondaryStorageProvider.getValueByKey(storagePrefix, parameter);
                     }
                     if (encodedValue == null) {
                         LOG.info("Couldn't find value for parameter: {}, failing..", fileKey);
@@ -102,10 +106,10 @@ public class InitMain {
 
                 } else if (parameter instanceof ResourceParameter) {
                     //resource params are encoded at rest, so retrieves an encoded value
-                    String encodedValue = primaryStorageProvider.get(storagePrefix, parameter);
+                    String encodedValue = primaryStorageProvider.getValueByKey(storagePrefix, parameter);
                     if (encodedValue == null && secondaryStorageProvider != null) {
                         //if secondary provider configured, try that
-                        encodedValue = secondaryStorageProvider.get(storagePrefix, parameter);
+                        encodedValue = secondaryStorageProvider.getValueByKey(storagePrefix, parameter);
                     }
                     if (encodedValue == null) {
                         LOG.info("Couldn't find value for parameter: {}, failing..", fileKey);
@@ -113,6 +117,25 @@ public class InitMain {
                     }
                     retrievedResources.put(fileKey, encodedValue);
 
+                } else if (parameter instanceof LeaseParameter) {
+                    if (podName == null) {
+                        throw new Exception("Pod name is required for leases");
+                    }
+
+                    //lease params are looked up by value rather than key
+                    String leasePrefix = parameter.getStorageFullPath(storagePrefix);
+                    String leaseKey = primaryStorageProvider.getKeyByParameterAndValue(storagePrefix, parameter, podName);
+                    if ((leaseKey == null || leaseKey.isEmpty()) && secondaryStorageProvider != null) {
+                        //if secondary provider configured, try that
+                        leaseKey = secondaryStorageProvider.getKeyByParameterAndValue(storagePrefix, parameter, podName);
+                    }
+                    if (leaseKey == null) {
+                        LOG.info("Couldn't find key for parameter: {}, failing..", fileKey);
+                        throw new RuntimeException("Couldn't find key for parameter:" + parameter.getFullAnnotationName());
+                    }
+                    String leaseValue = leaseKey.substring(leasePrefix.length() + 1) ;
+
+                    retrievedLeases.put(parameter.getParameterNameWithField(), Base64.getEncoder().encodeToString(leaseValue.getBytes(StandardCharsets.UTF_8)));
                 } else {
                     throw new RuntimeException("Unsupported parameter type");
                 }
@@ -145,6 +168,19 @@ public class InitMain {
             }
         });
         FileUtils.writeStringToFile(getResourcesFile(), resourcesOutput.toString(), "UTF-8");
+        LOG.info("Stored retrieved resources. Done.");
+
+        LOG.info("Writing out all retrieved leases, found {}, to {}", retrievedLeases.size(), getLeasesFile());
+        StringBuilder leasesOutput = new StringBuilder();
+        retrievedLeases.entrySet().stream().forEach(e -> leasesOutput.append(e.getKey() + "=" + e.getValue() + "\n"));
+        retrievedLeases.entrySet().stream().forEach(e -> {
+            try {
+                FileUtils.writeStringToFile(getLeasesFileForKey(e.getKey()), new String(Base64.getDecoder().decode(e.getValue())), "UTF-8");
+            } catch (IOException e1) {
+                LOG.error("Unable to write resource to file");
+            }
+        });
+        FileUtils.writeStringToFile(getLeasesFile(), leasesOutput.toString(), "UTF-8");
         LOG.info("Stored retrieved resources. Done.");
     }
 
@@ -212,6 +248,30 @@ public class InitMain {
         }
 
         return resourcesFile;
+    }
+
+    File getLeasesFile() {
+        File leasesFile;
+
+        if (Utils.getEnvironment().get("LEASES_FILE") == null) {
+            leasesFile = new File("/bsycorp-init/leases.properties");
+        } else {
+            leasesFile = new File(Utils.getEnvironment().get("LEASES_FILE"));
+        }
+
+        return leasesFile;
+    }
+
+    File getLeasesFileForKey(String key) {
+        File leasesFile;
+
+        if (Utils.getEnvironment().get("LEASES_FILE_PATH") != null) {
+            leasesFile = new File(Utils.getEnvironment().get("LEASES_FILE_PATH") + "/" + key);
+        } else {
+            leasesFile = new File("/bsycorp-init/" + key);
+        }
+
+        return leasesFile;
     }
 
     ModeEnum getMode() throws IOException {

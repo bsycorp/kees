@@ -67,6 +67,11 @@ public class ExportMain {
         LOG.info("Done");
     }
 
+    public static String generateResourceForFile(Map<String, String> environment, String moduleName, File inputFile, File exportTemplate) throws Exception {
+        Utils.setEnvironment(environment);
+        return generateResourceForFile(moduleName, inputFile, exportTemplate);
+    }
+
     public static String generateResourceForFile(String moduleName, File inputFile, File exportTemplate) throws Exception {
         LOG.info("Parsing YAML to extract module name and annotations..");
         List<Parameter> parameters = annotationParser.parseYamlFile(inputFile);

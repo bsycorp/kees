@@ -15,6 +15,8 @@ public abstract class Parameter {
             return new SecretParameter(annotationName, annotationValue);
         } else if (annotationName.startsWith("resource." + Utils.getAnnotationDomain())) {
             return new ResourceParameter(annotationName, annotationValue);
+        } else if (annotationName.startsWith("lease." + Utils.getAnnotationDomain())) {
+            return new LeaseParameter(annotationName, annotationValue);
         } else {
             //unsupported, skip
             return null;

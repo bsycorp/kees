@@ -3,14 +3,13 @@ package com.bsycorp.kees;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.bsycorp.kees.storage.DynamoDBStorageProvider;
 import com.bsycorp.kees.storage.InMemoryStorageProvider;
-import com.bsycorp.kees.storage.SSMStorageProvider;
 import com.bsycorp.kees.storage.StorageProvider;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
@@ -41,7 +40,7 @@ public class CreateMainTest {
         createMain = new CreateMain();
         createMain.setClient(server.getClient());
 
-        storageProvider = mock(SSMStorageProvider.class);
+        storageProvider = mock(DynamoDBStorageProvider.class);
         createMain.setStorageProvider(storageProvider);
         reset(storageProvider);
     }
@@ -81,7 +80,7 @@ public class CreateMainTest {
             Thread.sleep(500);
         }
 
-        verify(storageProvider, times(0)).put(any(), any(), any());
+        verify(storageProvider, times(0)).put(any(), any(), any(), any());
         assertEquals(false, hadException[0]);
 
     }
@@ -104,6 +103,9 @@ public class CreateMainTest {
         annotations.put("secret.bsycorp.com/api-key.service-c.v1_provider", "kind=DYNAMIC,type=RANDOM,size=128");
         annotations.put("secret.bsycorp.com/service-d.v1_public", "kind=DYNAMIC,type=RSA,size=2048");
         annotations.put("resource.bsycorp.com/app.db.main.url", "storageKey=db.url,localModeValue=dmFsdWU=");
+        annotations.put("lease.bsycorp.com/snowflake", "kind=INDEX,storageKeyPrefix=snowflake,rangeStart=0,rangeEnd=1000");
+        annotations.put("lease.bsycorp.com/snowflake2", "kind=INDEX,storageKeyPrefix=snowflake,rangeStart=0,rangeEnd=1000");
+        annotations.put("lease.bsycorp.com/someother-lease", "kind=INDEX,storageKeyPrefix=something,rangeStart=100,rangeEnd=1000");
 
         Pod pod = new PodBuilder()
                 .withNewMetadata()
@@ -145,15 +147,17 @@ public class CreateMainTest {
                 storageProvider.getStore().containsKey("local/api-key.service-c.v1_consumer"),
                 storageProvider.getStore().containsKey("local/api-key.service-c.v1_provider")
         );
-        Assert.assertEquals(9, storageProvider.getStore().size());
+        assertTrue(storageProvider.getStore().containsKey("local/leases/something.100"));
+        assertTrue(storageProvider.getStore().containsKey("local/leases/snowflake.0"));
+        Assert.assertEquals(11, storageProvider.getStore().size());
         assertEquals(false, hadException[0]);
         assertEquals(0, createMain.getExceptionCounter().get());
 
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void shouldFindOneModifiedMatchingPod() throws Exception {
-        SSMStorageProvider storageProvider = mock(SSMStorageProvider.class);
+        InMemoryStorageProvider storageProvider = new InMemoryStorageProvider();
         createMain.setStorageProvider(storageProvider);
         final boolean[] hadException = {false};
 
@@ -170,6 +174,9 @@ public class CreateMainTest {
         annotations.put("secret.bsycorp.com/service-e.api-key", "kind=DYNAMIC,type=RANDOM,size=128");
         annotations.put("secret.bsycorp.com/service-d.v1_public", "kind=DYNAMIC,type=RSA,size=2048");
         annotations.put("resource.bsycorp.com/app.db.main.url", "storageKey=db.url,localModeValue=dmFsdWU=");
+        annotations.put("lease.bsycorp.com/snowflake", "kind=INDEX,storageKeyPrefix=snowflake,rangeStart=0,rangeEnd=1000");
+        annotations.put("lease.bsycorp.com/snowflake2", "kind=INDEX,storageKeyPrefix=snowflake,rangeStart=0,rangeEnd=1000");
+        annotations.put("lease.bsycorp.com/someother-lease", "kind=INDEX,storageKeyPrefix=something,rangeStart=100,rangeEnd=1000");
 
         Pod pod = new PodBuilder()
                 .withNewMetadata()
@@ -179,9 +186,20 @@ public class CreateMainTest {
                 .endMetadata()
                 .build();
 
+        executorService.submit(() -> {
+            try {
+                createMain.run();
+            } catch (Exception e) {
+                e.printStackTrace();
+                hadException[0] = true;
+            }
+        });
+
         server.expect()
                 .withPath("/api/v1/pods?watch=true")
-                .andUpgradeToWebSocket().open().waitFor(500).andEmit(new WatchEvent(pod, "MODIFIED")).done().once();
+                .andUpgradeToWebSocket().open()
+                    .waitFor(500).andEmit(new WatchEvent(pod, "MODIFIED"))
+                    .waitFor(2500).andEmit(new WatchEvent(pod, "DELETED")).done().once();
 
         executorService.submit(() -> {
             try {
@@ -197,16 +215,14 @@ public class CreateMainTest {
             Thread.sleep(500);
         }
 
-        //verify we create 12 values and had no exceptions
-        verify(storageProvider, times(12)).put(eq("/bsycorp/testbed"), any(), any());
         assertEquals(false, hadException[0]);
         assertEquals(0, createMain.getExceptionCounter().get());
-
+        assertEquals(10, storageProvider.getStore().size());
     }
 
     @Test(timeout = 10000)
     public void shouldFindOneMatchingPodInLocalMode() throws Exception {
-        SSMStorageProvider storageProvider = mock(SSMStorageProvider.class);
+        DynamoDBStorageProvider storageProvider = mock(DynamoDBStorageProvider.class);
         createMain.setStorageProvider(storageProvider);
         final boolean[] hadException = {false};
 
@@ -215,6 +231,7 @@ public class CreateMainTest {
         annotations.put("init.bsycorp.com/storage-prefix", "local");
         annotations.put("secret.bsycorp.com/service-d.v1_public", "kind=DYNAMIC,type=RSA,size=2048");
         annotations.put("resource.bsycorp.com/app.db.main.url", "storageKey=db.url,localModeValue=dmFsdWU=");
+        annotations.put("lease.bsycorp.com/snowflake", "kind=INDEX,storageKeyPrefix=snowflake,rangeStart=0,rangeEnd=1000");
 
         Pod pod = new PodBuilder()
                 .withNewMetadata()
@@ -243,7 +260,7 @@ public class CreateMainTest {
         }
 
         //verify we create 12 values and had no exceptions
-        verify(storageProvider, times(0)).put(any(), any(), any());
+        verify(storageProvider, times(0)).put(any(), any(), any(), any());
         assertEquals(false, hadException[0]);
         assertEquals(0, createMain.getExceptionCounter().get());
 

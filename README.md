@@ -12,10 +12,11 @@ The functionalities of each component are outlined as following:
 * Watches for relevant pods
 * Read secret annotations
 * Create secrets that do not exist yet
+* Assigns and cleans up leases
 
 ## Init Container:
-* Read annotations of requested secrets and resources
-* Retrieve secret from Parameter Store
+* Read annotations of requested secrets, resources and leases
+* Retrieve secret from DynamoDB
 * Write secrets to EmptyDir for app container to consume
 
 ## Exporter:
@@ -25,7 +26,7 @@ The functionalities of each component are outlined as following:
 
 ## How does Init Container work?
 
-Init container are used to initialise a pod before an application container runs. In our case, it will read the secrets from Parameter Store, and make it available to the app container before it spins up.
+Init container are used to initialise a pod before an application container runs. In our case, it will read the secrets from DynamoDB, and make it available to the app container before it spins up.
 
 
 ### Step 1:
@@ -46,7 +47,7 @@ spec:
       name: annotations
 ```
 
-During the package stage we also generate a terraform IAM policy. The application needs to be given some permissions to the secret storage (SSM / Parameter Store) this is done via the Exporter.
+During the package stage we also generate a terraform IAM policy. The application needs to be given some permissions to the secret storage (DynamoDB) this is done via the Exporter.
 We want the manifest annotations to be the source of truth for defining what secrets an application needs access too, but this needs to be enforced by IAM, so
 the exporter is run at build/package time to generate a policy that ensures the two are aligned.
 
@@ -91,7 +92,7 @@ secret.bsycorp.com/db.password="kind=REFERENCE,type=PASSWORD"
 The init image will then
 
 * Process the annotations and extract secret keys
-* Query Parameter Store to retrieve the secret values (as restricted by its IAM role)
+* Query DynamoDB to retrieve the secret values (as restricted by its IAM role)
 * Save the secret key value pairs to a file in EmptyDir
 
 An example output /secret/secret would be as following:

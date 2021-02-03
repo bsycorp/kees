@@ -25,7 +25,7 @@ spec:
         secret.bsycorp.com/gpg.v1_password: "kind=DYNAMIC,type=GPG,size=2048,userId=user<user@email.com>"
         # Resources are more general and can be used to store general configuration that may be dynamic or not known
         # ahead of time.  For example if a database is provisioned as part of a deployment, its url can be placed
-        # into DynamoDB or SSM in a well known location.  The application can then just refer to this resource.  Now
+        # into DynamoDB in a well known location.  The application can then just refer to this resource.  Now
         # you no longer need to have per-environment URLs configured and your application will automagically get the
         # right one when it starts up.
         resource.bsycorp.com/db-url: "storageKey=db.url,localModeValue=bG9jYWxob3N0OjU0MzIK"
