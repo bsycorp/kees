@@ -220,6 +220,25 @@ public class CreateMainTest {
         assertEquals(12, storageProvider.getStore().size());
     }
 
+    @Test
+    public void isLocalMode() {
+        Map<String, String> annotations = new HashMap<>();
+        annotations.put("init.bsycorp.com/local-mode", "true");
+        assertEquals(true, createMain.isLocalMode(annotations));
+
+        annotations.clear();
+        annotations.put("init.bsycorp.com/local-mode", "remote-then-local");
+        assertEquals(true, createMain.isLocalMode(annotations));
+
+        annotations.clear();
+        annotations.put("init.bsycorp.com/local-mode", "false");
+        assertEquals(false, createMain.isLocalMode(annotations));
+
+        annotations.clear();
+        assertEquals(false, createMain.isLocalMode(annotations));
+
+    }
+
     @Test(timeout = 10000)
     public void shouldFindOneMatchingPodInLocalMode() throws Exception {
         DynamoDBStorageProvider storageProvider = mock(DynamoDBStorageProvider.class);

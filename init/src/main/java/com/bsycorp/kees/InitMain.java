@@ -279,10 +279,14 @@ public class InitMain {
         properties.load(new FileInputStream(getAnnotationsFile()));
         //if local mode exists and its true
         String localMode = ((String) properties.get("init." + getAnnotationDomain() + "/local-mode"));
-        if((localMode.startsWith("\"") && localMode.endsWith("\"")) ||
+        if (localMode == null) {
+            return ModeEnum.REMOTE;
+
+        } else if((localMode.startsWith("\"") && localMode.endsWith("\"")) ||
                 (localMode.startsWith("\'") && localMode.endsWith("\'"))) {
             localMode = localMode.substring(1, localMode.length()-1);
         }
+
         if ("true".equals(localMode.trim())) {
             return ModeEnum.LOCAL;
         } else if ("remote-then-local".equals(localMode.trim())) {

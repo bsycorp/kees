@@ -253,8 +253,10 @@ public class CreateMain {
     }
 
     public void shutdown() {
-        watch.close();
-        watcherLatch.countDown();
+        if (watch != null) {
+            watch.close();
+            watcherLatch.countDown();
+        }
     }
 
     public void setClient(KubernetesClient client) {
