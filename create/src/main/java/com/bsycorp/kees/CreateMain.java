@@ -104,8 +104,9 @@ public class CreateMain {
                             for (Parameter parameter : parameters) {
                                 try {
                                     //if we have processed this param recently then skip!
-                                    if (expiringCache.containsKey(parameter.getParameterNameWithField() + action.name())) {
-                                        LOG.info("Skipping parameter {} as already exists in processed cache..", parameter.getParameterName());
+                                    String cacheKey = getCacheKey(resource, parameter, storagePrefix);
+                                    if (expiringCache.containsKey(cacheKey)) {
+                                        LOG.info("Skipping parameter '{}' as already exists in processed cache..", cacheKey);
                                         continue;
                                     }
 
@@ -123,7 +124,6 @@ public class CreateMain {
                                         } else {
                                             throw new RuntimeException("Unsupported parameter");
                                         }
-
                                     }
 
                                 } catch (Exception e) {
@@ -191,7 +191,7 @@ public class CreateMain {
             }
 
             LOG.info("Created value for {}", parameter.getParameterName());
-            expiringCache.put(parameter.getParameterNameWithField() + action.name(), "success");
+            expiringCache.put(getCacheKey(resource, parameter, storagePrefix), "success");
         }
     }
 
@@ -219,7 +219,7 @@ public class CreateMain {
                                 leaseKey.substring(storageKeyPrefix.length() + 1)
                         ), podName, false);
                         LOG.info("Created lease {} for pod {}", leaseKey, podName);
-                        expiringCache.put(parameter.getParameterNameWithField() + action.name(), "success");
+                        expiringCache.put(getCacheKey(resource, parameter, storagePrefix), "success");
                         assignedLease = true;
                         break;
                     } catch (Exception e) {
@@ -233,7 +233,7 @@ public class CreateMain {
 
             } else {
                 LOG.info("Re-used lease {} for pod {}", leaseKey, podName);
-                expiringCache.put(parameter.getParameterNameWithField() + action.name(), "success");
+                expiringCache.put(getCacheKey(resource, parameter, storagePrefix), "success");
             }
 
             //also have housekeeping control loop to keep local cache in sync and clean up missing / deleted pods
@@ -281,6 +281,15 @@ public class CreateMain {
         //if local mode exists and its true
         return properties != null
                 && properties.containsKey("init." + getAnnotationDomain() + "/local-mode")
-                && ((String) properties.get("init."  + getAnnotationDomain() + "/local-mode")).contains("true");
+                && (!((String) properties.get("init."  + getAnnotationDomain() + "/local-mode")).contains("false"));
     }
+
+    String getCacheKey(Pod resource, Parameter parameter, String storagePrefix) {
+        if (parameter instanceof LeaseParameter) {
+            return storagePrefix + "/" + parameter.getParameterName() + "@" + resource.getMetadata().getNamespace() + "/" + resource.getMetadata().getName();
+        } else {
+            return storagePrefix + "/" + parameter.getParameterNameWithField();
+        }
+    }
+
 }

@@ -217,7 +217,7 @@ public class CreateMainTest {
 
         assertEquals(false, hadException[0]);
         assertEquals(0, createMain.getExceptionCounter().get());
-        assertEquals(10, storageProvider.getStore().size());
+        assertEquals(12, storageProvider.getStore().size());
     }
 
     @Test(timeout = 10000)
