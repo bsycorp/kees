@@ -6,7 +6,7 @@ if [ -z "$TRAVIS_BRANCH" ]; then
 fi
 ./gradlew build bintrayUpload -i -PappVersion="$TRAVIS_BRANCH" --stacktrace
 ./gradlew nativeImage -i -PappVersion="$TRAVIS_BRANCH" --stacktrace
-(cd init; docker build . -t bsycorp/kees-init:"$TRAVIS_BRANCH")
 (cd create; docker build . -t bsycorp/kees-creator:"$TRAVIS_BRANCH")
-docker push bsycorp/kees-init
-docker push bsycorp/kees-creator
+docker push bsycorp/kees-creator:$TRAVIS_BRANCH
+(cd init; docker build . -t bsycorp/kees-init:"$TRAVIS_BRANCH")
+docker push bsycorp/kees-init:$TRAVIS_BRANCH
