@@ -1,4 +1,3 @@
-FROM bitnami/minideb:stretch
-ADD build/graal/kees-create-linux-x86_64 /kees-create
-RUN chmod +x /kees-create
-CMD ["/kees-create"]
+FROM bitnami/java:1.8-prod
+ADD build/distributions/create.tar /app/
+CMD ["/app/create/bin/create"]

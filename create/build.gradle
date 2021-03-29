@@ -19,6 +19,7 @@ repositories {
 
 apply plugin: 'java'
 apply plugin: 'maven'
+apply plugin: 'application'
 apply plugin: com.palantir.gradle.graal.GradleGraalPlugin
 apply plugin: com.google.gradle.osdetector.OsDetectorPlugin
 
@@ -27,6 +28,10 @@ targetCompatibility = 1.8
 group = 'com.bsycorp.kees'
 if (findProperty("appVersion") != null){
     version = findProperty("appVersion")
+}
+
+application {
+    mainClass = 'com.bsycorp.kees.CreateMain'
 }
 
 dependencies {
