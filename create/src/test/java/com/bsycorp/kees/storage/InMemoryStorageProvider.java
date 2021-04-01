@@ -7,11 +7,13 @@ import java.util.Map;
 public class InMemoryStorageProvider implements StorageProvider {
 
     private Map<String, String> store = new HashMap<>();
+    private int storeHighwaterMark = 0;
 
     @Override
     public void put(String storagePrefix, Parameter key, String value, Boolean ignorePutFailure) {
         String fullKey = key.getStorageFullPath(storagePrefix);
         store.put(fullKey, value);
+        if (store.size() > storeHighwaterMark) storeHighwaterMark = store.size();
     }
 
     @Override
@@ -44,5 +46,9 @@ public class InMemoryStorageProvider implements StorageProvider {
 
     public Map<String, String> getStore() {
         return store;
+    }
+
+    public int getStoreHighwaterMark() {
+        return storeHighwaterMark;
     }
 }

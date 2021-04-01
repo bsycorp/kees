@@ -217,7 +217,10 @@ public class CreateMainTest {
 
         assertEquals(false, hadException[0]);
         assertEquals(0, createMain.getExceptionCounter().get());
-        assertEquals(12, storageProvider.getStore().size());
+        //store has 10, bc we deleted the pod and the leases were removed, good!
+        assertEquals(10, storageProvider.getStore().size());
+        //high watermark is 12, because the leases _were_ added but then removed.
+        assertEquals(12, storageProvider.getStoreHighwaterMark());
     }
 
     @Test

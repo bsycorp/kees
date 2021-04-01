@@ -103,6 +103,12 @@ public class CreateMain {
                             LOG.info("Found {} matching annotations to process..", parameters.size());
                             for (Parameter parameter : parameters) {
                                 try {
+                                    //handle deletes without looking at process cache
+                                    if (action == Action.DELETED && parameter instanceof LeaseParameter) {
+                                        handleLeaseParameterDelete((LeaseParameter) parameter, resource, storagePrefix);
+                                        continue;
+                                    }
+
                                     //if we have processed this param recently then skip!
                                     String cacheKey = getCacheKey(resource, parameter, storagePrefix);
                                     if (expiringCache.containsKey(cacheKey)) {
@@ -110,24 +116,23 @@ public class CreateMain {
                                         continue;
                                     }
 
+                                    //otherwise process the parameter depending on the type
                                     if (parameter instanceof LeaseParameter) {
-                                        handleLeaseParameter((LeaseParameter) parameter, resource, action, storagePrefix);
+                                        handleLeaseParameterUpsert((LeaseParameter) parameter, resource, storagePrefix);
 
-                                    //check provider, see if it already exists, if nothing then go create..
-                                    } else if (!storageProvider.exists(storagePrefix, parameter) && action != Action.DELETED) {
-                                        if (parameter instanceof SecretParameter) {
-                                            handleSecretParameter((SecretParameter) parameter, resource, action, storagePrefix);
+                                    } else if (parameter instanceof ResourceParameter) {
+                                        //ignore as resources can't be generated
 
-                                        } else if (parameter instanceof ResourceParameter) {
-                                            //ignore as resources can't be generated
+                                    } else if (parameter instanceof SecretParameter && !storageProvider.exists(storagePrefix, parameter)) {
+                                        //check provider, see if it already exists, if nothing then go create..
+                                        handleSecretParameter((SecretParameter) parameter, resource, action, storagePrefix);
 
-                                        } else {
-                                            throw new RuntimeException("Unsupported parameter");
-                                        }
+                                    } else {
+                                        throw new RuntimeException("Unsupported parameter");
                                     }
 
                                 } catch (Exception e) {
-                                    LOG.error("Error creating value for annotation: " + parameter.getFullAnnotationName(), e);
+                                    LOG.error("Error completing processing for annotation: " + parameter.getFullAnnotationName(), e);
                                 }
                             }
                         }
@@ -195,60 +200,58 @@ public class CreateMain {
         }
     }
 
-    protected void handleLeaseParameter(LeaseParameter parameter, Pod resource, Watcher.Action action, String storagePrefix) throws IOException {
-        if (action == Watcher.Action.ADDED || action == Watcher.Action.MODIFIED) {
-            //take lease storage prefix and find a lease index within the range, keep leased items in memory to make leasing cheaper
-            //make sure we havent already given this pod a lease, if so use that value
-            LeaseParameter leaseParameter = parameter;
-            String podName = resource.getMetadata().getName();
-            String storageKeyPrefix = leaseParameter.getStorageKeyPrefix();
+    protected void handleLeaseParameterUpsert(LeaseParameter parameter, Pod resource, String storagePrefix) throws IOException {
+        //take lease storage prefix and find a lease index within the range, keep leased items in memory to make leasing cheaper
+        //make sure we havent already given this pod a lease, if so use that value
+        LeaseParameter leaseParameter = parameter;
+        String podName = resource.getMetadata().getName();
+        String storageKeyPrefix = leaseParameter.getStorageKeyPrefix();
 
-            String leaseKey = storageProvider.getKeyByParameterAndValue(storagePrefix, parameter, podName);
-            if (leaseKey == null) {
-                boolean assignedLease = false;
-                //generate valid local value for lease
-                for (int index = leaseParameter.getRangeStart(); index <= leaseParameter.getRangeEnd(); index++) {
-                    //it would be more efficient to try and maintain a list of what has been previously issued, but that risks omitting valie numbers
-                    //since the range is probably small, just brute force lookups against dynamo until we get one that succeeds
-                    String potentialLeaseKey = storageKeyPrefix + "." + index;
-                    //reserve that value in dynamo against pod
-                    leaseKey = potentialLeaseKey;
-                    try {
-                        storageProvider.put(storagePrefix, new ResolvedLeaseParameter(
-                                parameter,
-                                leaseKey.substring(storageKeyPrefix.length() + 1)
-                        ), podName, false);
-                        LOG.info("Created lease {} for pod {}", leaseKey, podName);
-                        expiringCache.put(getCacheKey(resource, parameter, storagePrefix), "success");
-                        assignedLease = true;
-                        break;
-                    } catch (Exception e) {
-                        //error putting key, assume its conflicting / already taken, try again
-                    }
+        String leaseKey = storageProvider.getKeyByParameterAndValue(storagePrefix, parameter, podName);
+        if (leaseKey==null) {
+            boolean assignedLease = false;
+            //generate valid local value for lease
+            for (int index = leaseParameter.getRangeStart(); index <= leaseParameter.getRangeEnd(); index++) {
+                //it would be more efficient to try and maintain a list of what has been previously issued, but that risks omitting valie numbers
+                //since the range is probably small, just brute force lookups against dynamo until we get one that succeeds
+                String potentialLeaseKey = storageKeyPrefix + "." + index;
+                //reserve that value in dynamo against pod
+                leaseKey = potentialLeaseKey;
+                try {
+                    storageProvider.put(storagePrefix, new ResolvedLeaseParameter(
+                            parameter,
+                            leaseKey.substring(storageKeyPrefix.length() + 1)
+                    ), podName, false);
+                    LOG.info("Created lease {} for pod {}", leaseKey, podName);
+                    expiringCache.put(getCacheKey(resource, parameter, storagePrefix), "success");
+                    assignedLease = true;
+                    break;
+                } catch (Exception e) {
+                    //error putting key, assume its conflicting / already taken, try again
                 }
-
-                if (!assignedLease) {
-                    LOG.error("Couldn't create valid lease for prefix, ran out of valid leases: {}", storageKeyPrefix);
-                }
-
-            } else {
-                LOG.info("Re-used lease {} for pod {}", leaseKey, podName);
-                expiringCache.put(getCacheKey(resource, parameter, storagePrefix), "success");
             }
 
-            //also have housekeeping control loop to keep local cache in sync and clean up missing / deleted pods
-
-        } else if (action == Watcher.Action.DELETED) {
-            String podName = resource.getMetadata().getName();
-
-            String fullLeaseKey = storageProvider.getKeyByParameterAndValue(storagePrefix, parameter, podName);
-            if (fullLeaseKey != null && !fullLeaseKey.isEmpty()) {
-                String leaseValue = fullLeaseKey.substring((storagePrefix + "/leases/" + parameter.getStorageKeyPrefix()).length() + 1);
-                storageProvider.delete(storagePrefix, new ResolvedLeaseParameter(parameter, leaseValue), podName);
-                LOG.info("Deleted lease for pod: {} with key: {}", podName, fullLeaseKey);
-            } else {
-                LOG.debug("Didn't delete lease for pod: {} with key: {}", podName, fullLeaseKey);
+            if (!assignedLease) {
+                LOG.error("Couldn't create valid lease for prefix, ran out of valid leases: {}", storageKeyPrefix);
             }
+
+        } else {
+            LOG.info("Re-used lease {} for pod {}", leaseKey, podName);
+            expiringCache.put(getCacheKey(resource, parameter, storagePrefix), "success");
+        }
+    }
+
+    //also have housekeeping control loop to keep local cache in sync and clean up missing / deleted pods
+    protected void handleLeaseParameterDelete(LeaseParameter parameter, Pod resource, String storagePrefix) throws IOException {
+        String podName = resource.getMetadata().getName();
+
+        String fullLeaseKey = storageProvider.getKeyByParameterAndValue(storagePrefix, parameter, podName);
+        if (fullLeaseKey != null && !fullLeaseKey.isEmpty()) {
+            String leaseValue = fullLeaseKey.substring((storagePrefix + "/leases/" + parameter.getStorageKeyPrefix()).length() + 1);
+            storageProvider.delete(storagePrefix, new ResolvedLeaseParameter(parameter, leaseValue), podName);
+            LOG.info("Deleted lease for pod: {} with key: {}", podName, fullLeaseKey);
+        } else {
+            LOG.debug("Didn't delete lease for pod: {} with key: {}", podName, fullLeaseKey);
         }
     }
 
