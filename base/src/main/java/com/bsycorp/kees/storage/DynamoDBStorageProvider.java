@@ -69,29 +69,28 @@ public class DynamoDBStorageProvider implements StorageProvider {
     @Override
     public void delete(String storagePrefix, Parameter key, String expectedValue) {
         String itemPath = key.getStorageFullPath(storagePrefix);
-        LOG.info("Deleting DDB item for key: {}", itemPath);
+        LOG.info("Deleting DDB item for key: {} with expected value: {}", itemPath, expectedValue);
 
         try {
             Map<String, AttributeValue> values = new HashMap<>();
             values.put("secretName", AttributeValue.builder().s(itemPath).build());
-            values.put("secretValue", AttributeValue.builder().s(expectedValue).build());
+
+            Map<String, AttributeValue> conditions = new HashMap<>();
+            conditions.put(":value", AttributeValue.builder().s(expectedValue).build());
             client.deleteItem(
                     DeleteItemRequest.builder()
                             .tableName(tableName)
                             .key(values)
+                            .conditionExpression("secretValue = :value")
+                            .expressionAttributeValues(conditions)
                             .build()
             );
             //success!
             LOG.info("Deleted DDB parameter and value for key: {}", itemPath);
 
-        } catch (ConditionalCheckFailedException ce) {
-            //item already exists
-            LOG.error("Error deleting value for key: {}", itemPath);
-            throw new RuntimeException("Failed to delete key", ce);
-
         } catch (DynamoDbException e) {
             //had error finding value, could be missing or invalid or error
-            LOG.error("Error when deleting item for key: " + itemPath, e);
+            LOG.error("Error deleting item for key: " + itemPath, e);
         }
     }
 
