@@ -123,7 +123,7 @@ public class CreateMain {
                                     } else if (parameter instanceof ResourceParameter) {
                                         //ignore as resources can't be generated
 
-                                    } else if (parameter instanceof SecretParameter && !storageProvider.exists(storagePrefix, parameter)) {
+                                    } else if (parameter instanceof SecretParameter) {
                                         //check provider, see if it already exists, if nothing then go create..
                                         handleSecretParameter((SecretParameter) parameter, resource, action, storagePrefix);
 
@@ -161,8 +161,13 @@ public class CreateMain {
     }
 
     private void handleSecretParameter(SecretParameter parameter, Pod resource, Watcher.Action action, String storagePrefix) {
+        //if secret already exists then noop, don't re-generate
+        if(storageProvider.exists(storagePrefix, parameter)) {
+            return;
+        }
+
         //only create values for dynamic values
-        if (((SecretParameter) parameter).getKind() == SecretKindEnum.DYNAMIC) {
+        if (parameter.getKind() == SecretKindEnum.DYNAMIC) {
             LOG.info("Found parameter {} with no matching value, creating..", parameter.getParameterName());
             SecretParameter secretParameter = (SecretParameter) parameter;
 
