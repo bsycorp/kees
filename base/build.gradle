@@ -2,15 +2,9 @@ buildscript {
     repositories {
         mavenLocal()
         mavenCentral()
-        jcenter()
         maven { url "https://plugins.gradle.org/m2/" }
     }
-    dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
-    }
 }
-
-apply plugin: 'com.jfrog.bintray'
 
 repositories {
     mavenLocal()
@@ -20,10 +14,12 @@ repositories {
 
 apply plugin: 'java'
 apply plugin: 'maven'
+apply plugin: 'maven-publish'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 group = 'com.bsycorp.kees'
+
 if (findProperty("appVersion") != null){
     version = findProperty("appVersion")
 }
@@ -47,7 +43,6 @@ dependencies {
     compile "com.github.jknack:handlebars:4.0.6"
     compile "org.bouncycastle:bcpg-jdk15on:1.60"
 
-
     testCompile "junit:junit:4.11"
     testCompile "org.mockito:mockito-core:1.8.4"
     // We use bouncy-gpg to test the deterministic generated gpg keys
@@ -58,34 +53,23 @@ dependencies {
     testCompile "org.bouncycastle:bcprov-jdk15on:1.60"
 }
 
-artifacts {
-    archives jar
-}
-
-bintray {
-    user = System.getenv('BINTRAY_USER')
-    key = System.getenv('BINTRAY_KEY')
-    configurations = ['archives']
-    publish = true
-
-    pkg {
-        repo = 'public'
-        name = 'kees'
-        desc = "Kubernetes External Environment Secrets"
-        userOrg = 'bsycorp'
-        licenses = ['MIT']
-        vcsUrl = 'https://github.com/bsycorp/kees.git'
-
-        version {
-            name = System.getProperty('appVersion')
-            desc = 'Kubernetes External Environment Secrets'
-            released = new Date()
-            gpg {
-                sign = true
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/bsycorp/kees")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
             }
         }
     }
-
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.bsycorp.kees'
+            artifactId = 'base'
+            version = findProperty("appVersion")
+            from components.java
+        }
+    }
 }
-
-bintrayUpload.dependsOn(jar)

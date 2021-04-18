@@ -4,7 +4,7 @@ set -e
 if [ -z "$TRAVIS_BRANCH" ]; then
   TRAVIS_BRANCH="${GITHUB_REF##*/}"
 fi
-./gradlew build bintrayUpload -i -PappVersion="$TRAVIS_BRANCH" --stacktrace
+./gradlew build publish -i -PappVersion="$TRAVIS_BRANCH" --stacktrace
 ./gradlew nativeImage -i -PappVersion="$TRAVIS_BRANCH" --stacktrace
 ./gradlew distTar -i --stacktrace
 (cd create; docker build . -t bsycorp/kees-creator:"$TRAVIS_BRANCH")

@@ -2,17 +2,13 @@ buildscript {
     repositories {
         mavenLocal()
         mavenCentral()
-        jcenter()
         maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
         classpath "gradle.plugin.com.palantir.graal:gradle-graal:0.7.1"
         classpath "com.google.gradle:osdetector-gradle-plugin:1.6.2"
     }
 }
-
-apply plugin: 'com.jfrog.bintray'
 
 repositories {
     mavenLocal()
@@ -22,6 +18,7 @@ repositories {
 
 apply plugin: 'java'
 apply plugin: 'maven'
+apply plugin: 'maven-publish'
 apply plugin: com.palantir.gradle.graal.GradleGraalPlugin
 apply plugin: com.google.gradle.osdetector.OsDetectorPlugin
 
@@ -40,37 +37,26 @@ dependencies {
     testCompile "com.github.stefanbirkner:system-rules:1.17.0"
 }
 
-artifacts {
-    archives jar
-}
-
-bintray {
-    user = System.getenv('BINTRAY_USER')
-    key = System.getenv('BINTRAY_KEY')
-    configurations = ['archives']
-    publish = true
-
-    pkg {
-        repo = 'public'
-        name = 'kees-init'
-        desc = "Kubernetes External Environment Secrets"
-        userOrg = 'bsycorp'
-        licenses = ['MIT']
-        vcsUrl = 'https://github.com/bsycorp/kees.git'
-
-        version {
-            name = System.getProperty('appVersion')
-            desc = 'Kubernetes External Environment Secrets'
-            released = new Date()
-            gpg {
-                sign = true
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/bsycorp/kees")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
             }
         }
     }
-
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.bsycorp.kees'
+            artifactId = 'init'
+            version = findProperty("appVersion")
+            from components.java
+        }
+    }
 }
-
-bintrayUpload.dependsOn(jar)
 
 def nativeImageOutput = "kees-init-${osdetector.classifier}"
 graal {
