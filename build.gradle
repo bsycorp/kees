@@ -2,16 +2,9 @@ buildscript {
     repositories {
         mavenLocal()
         mavenCentral()
-        jcenter()
         maven { url "https://plugins.gradle.org/m2/" }
     }
-    dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.2'
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
-    }
 }
-
-apply plugin: 'com.jfrog.bintray'
 
 repositories {
     mavenLocal()
@@ -19,9 +12,9 @@ repositories {
     jcenter()
 }
 
-apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'java'
 apply plugin: 'maven'
+apply plugin: 'maven-publish'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -60,35 +53,23 @@ jar {
     }
 }
 
-artifacts {
-    archives jar
-    archives shadowJar
-}
-
-bintray {
-    user = System.getenv('BINTRAY_USER')
-    key = System.getenv('BINTRAY_KEY')
-    configurations = ['archives']
-    publish = true
-
-    pkg {
-        repo = 'public'
-        name = 'kees'
-        desc = "Kubernetes External Environment Secrets"
-        userOrg = 'bsycorp'
-        licenses = ['MIT']
-        vcsUrl = 'https://github.com/bsycorp/kees.git'
-
-        version {
-            name = System.getProperty('appVersion')
-            desc = 'Kubernetes External Environment Secrets'
-            released = new Date()
-            gpg {
-                sign = true
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/bsycorp/kees")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
             }
         }
     }
-
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.bsycorp.kees'
+            artifactId = 'all'
+            version = '0.1.4'
+            from components.java
+        }
+    }
 }
-
-bintrayUpload.dependsOn(shadowJar)
