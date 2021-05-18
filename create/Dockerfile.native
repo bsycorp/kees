@@ -1,4 +1,5 @@
 FROM bitnami/minideb:stretch
+ENV JAVA_OPTS=""
 ADD build/graal/kees-create-linux-x86_64 /kees-create
 RUN chmod +x /kees-create
-CMD ["/kees-create"]
+CMD exec /kees-create $JAVA_OPTS
