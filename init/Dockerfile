@@ -1,5 +1,4 @@
-FROM bitnami/minideb:stretch
+FROM bitnami/java:1.8-prod
 ENV JAVA_OPTS=""
-ADD build/graal/kees-init-linux-x86_64 /kees-init
-RUN chmod +x /kees-init
-CMD exec /kees-init $JAVA_OPTS
+ADD build/distributions/init.tar /app/
+CMD ["/app/init/bin/init"]
