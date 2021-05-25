@@ -41,7 +41,7 @@ dependencies {
 
     compile "commons-io:commons-io:2.7"
     compile "com.github.jknack:handlebars:4.0.6"
-    compile "org.bouncycastle:bcpg-jdk15on:1.66"
+    compile "org.bouncycastle:bcpg-jdk15on:1.68"
 
     testCompile "junit:junit:4.11"
     testCompile "org.mockito:mockito-core:1.8.4"
@@ -50,7 +50,7 @@ dependencies {
         exclude group: "org.bouncycastle", module: "bcprov-jdk15on"
         exclude group: "org.bouncycastle", module: "bcpg-jdk15on"
     }
-    testCompile "org.bouncycastle:bcprov-jdk15on:1.66"
+    testCompile "org.bouncycastle:bcprov-jdk15on:1.68"
 }
 
 publishing {
