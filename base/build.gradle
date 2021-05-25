@@ -37,7 +37,7 @@ dependencies {
     compile 'org.yaml:snakeyaml:1.20'
     compile "org.slf4j:slf4j-api:1.7.25"
     compile "org.slf4j:slf4j-simple:1.7.25"
-    compile "com.beust:jcommander:1.75"
+    compile "com.beust:jcommander:1.81"
 
     compile "commons-io:commons-io:2.7"
     compile "com.github.jknack:handlebars:4.0.6"
