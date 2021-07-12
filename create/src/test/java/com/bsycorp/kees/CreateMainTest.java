@@ -16,7 +16,6 @@ import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.WatchEvent;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -24,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
 
 public class CreateMainTest {
 
@@ -88,6 +88,7 @@ public class CreateMainTest {
     @Test(timeout = 10000)
     public void shouldFindOneMatchingPod() throws Exception {
         InMemoryStorageProvider storageProvider = new InMemoryStorageProvider();
+        IntStream.range(100, 200).forEach(i -> storageProvider.getStore().put("local/leases/something." + i, "pod-name"));
         createMain.setStorageProvider(storageProvider);
         final boolean[] hadException = {false};
 
@@ -143,13 +144,14 @@ public class CreateMainTest {
         assertTrue(storageProvider.getStore().containsKey("local/api-key.service-c.v1_provider"));
         assertTrue(storageProvider.getStore().containsKey("local/common.thing.v1_private"));
         assertTrue(storageProvider.getStore().containsKey("local/common.thing.v1_public"));
-        Assert.assertEquals(
+        assertEquals(
                 storageProvider.getStore().containsKey("local/api-key.service-c.v1_consumer"),
                 storageProvider.getStore().containsKey("local/api-key.service-c.v1_provider")
         );
-        assertTrue(storageProvider.getStore().containsKey("local/leases/something.100"));
+        assertTrue(storageProvider.getStore().containsKey("local/leases/something.200"));
         assertTrue(storageProvider.getStore().containsKey("local/leases/snowflake.0"));
-        Assert.assertEquals(11, storageProvider.getStore().size());
+        assertEquals(5, storageProvider.getStoreGetCounter());
+        assertEquals(111, storageProvider.getStore().size());
         assertEquals(false, hadException[0]);
         assertEquals(0, createMain.getExceptionCounter().get());
 

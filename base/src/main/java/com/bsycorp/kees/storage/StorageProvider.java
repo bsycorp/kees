@@ -1,6 +1,7 @@
 package com.bsycorp.kees.storage;
 
 import com.bsycorp.kees.models.Parameter;
+import java.util.List;
 
 public interface StorageProvider {
 
@@ -14,6 +15,9 @@ public interface StorageProvider {
 
     //get() returns the stored key for the given value, to support leases where the key is what we are looking for
     String getKeyByParameterAndValue(String storagePrefix, Parameter parameter, String value);
+
+    //get all keys for the given prefix and parameter
+    List<String> getKeysByParameter(String storagePrefix, Parameter parameter);
 
     //get() returns the stored value for the given key, to support binary values all stored values are b64 encoded first
     boolean exists(String storagePrefix, Parameter key);

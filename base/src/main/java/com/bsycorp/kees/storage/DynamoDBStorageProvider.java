@@ -17,8 +17,11 @@ import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class DynamoDBStorageProvider implements StorageProvider {
 
@@ -148,6 +151,37 @@ public class DynamoDBStorageProvider implements StorageProvider {
         } catch (DynamoDbException e) {
             //had error finding value, could be missing or invalid or error
             LOG.error("Error when looking up parameter with value: " + value, e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public List<String> getKeysByParameter(String storagePrefix, Parameter parameter) {
+        LOG.info("Looking up DDB keys for param: {}", parameter);
+
+        try {
+            Map<String, AttributeValue> expressionValues = new HashMap<>();
+            expressionValues.put(":storagePrefix", AttributeValue.builder().s(parameter.getStorageFullPath(storagePrefix)).build());
+            ScanResponse result = client.scan(
+                    ScanRequest.builder()
+                            .tableName(tableName)
+                            .filterExpression("begins_with(secretName, :storagePrefix)")
+                            .expressionAttributeValues(expressionValues)
+                            .build()
+            );
+            if (!result.hasItems()){
+                LOG.warn("Couldn't find items for param: {}", parameter);
+                return Collections.emptyList();
+            }
+            return result.items().stream().map(i -> i.get("secretName").s()).collect(Collectors.toList());
+
+        } catch (ResourceNotFoundException e) {
+            LOG.warn("Couldn't find item for param: {}", parameter);
+            return Collections.emptyList();
+
+        } catch (DynamoDbException e) {
+            //had error finding value, could be missing or invalid or error
+            LOG.error("Error when looking up parameter with param: " + parameter, e);
             throw new RuntimeException(e);
         }
     }

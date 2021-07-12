@@ -211,15 +211,21 @@ public class CreateMain {
         LeaseParameter leaseParameter = parameter;
         String podName = resource.getMetadata().getName();
         String storageKeyPrefix = leaseParameter.getStorageKeyPrefix();
+        long start = System.currentTimeMillis();
 
         String leaseKey = storageProvider.getKeyByParameterAndValue(storagePrefix, parameter, podName);
-        if (leaseKey==null) {
+        if (leaseKey == null) {
+            List<String> existingLeaseKeys = storageProvider.getKeysByParameter(storagePrefix, parameter);
             boolean assignedLease = false;
             //generate valid local value for lease
             for (int index = leaseParameter.getRangeStart(); index <= leaseParameter.getRangeEnd(); index++) {
-                //it would be more efficient to try and maintain a list of what has been previously issued, but that risks omitting valie numbers
+                //it would be more efficient to try and maintain a list of what has been previously issued, but that risks omitting valid numbers
                 //since the range is probably small, just brute force lookups against dynamo until we get one that succeeds
                 String potentialLeaseKey = storageKeyPrefix + "." + index;
+                //check if this potential lease is alreday taken, if so skip it.
+                if (existingLeaseKeys.contains(potentialLeaseKey)) {
+                    continue;
+                }
                 //reserve that value in dynamo against pod
                 leaseKey = potentialLeaseKey;
                 try {
@@ -227,7 +233,7 @@ public class CreateMain {
                             parameter,
                             leaseKey.substring(storageKeyPrefix.length() + 1)
                     ), podName, false);
-                    LOG.info("Created lease {} for pod {}", leaseKey, podName);
+                    LOG.info("Created lease {} for pod {} took: {}ms", leaseKey, podName, System.currentTimeMillis() - start);
                     expiringCache.put(getCacheKey(resource, parameter, storagePrefix), "success");
                     assignedLease = true;
                     break;
@@ -241,7 +247,7 @@ public class CreateMain {
             }
 
         } else {
-            LOG.info("Re-used lease {} for pod {}", leaseKey, podName);
+            LOG.info("Re-used lease {} for pod {}, took {}ms", leaseKey, podName, System.currentTimeMillis() - start);
             expiringCache.put(getCacheKey(resource, parameter, storagePrefix), "success");
         }
     }

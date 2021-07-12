@@ -5,6 +5,8 @@ import com.bsycorp.kees.models.Parameter;
 import com.bsycorp.kees.models.ResourceParameter;
 import com.bsycorp.kees.models.SecretParameter;
 import com.bsycorp.kees.models.SecretTypeEnum;
+import java.util.Collections;
+import java.util.List;
 
 public class LocalStorageProvider implements StorageProvider {
 
@@ -59,6 +61,11 @@ public class LocalStorageProvider implements StorageProvider {
         int index = Byte.toUnsignedInt(bytes[0]) + Byte.toUnsignedInt(bytes[1]) + Byte.toUnsignedInt(bytes[2]);
         //generate 3 byte of deterministic entropy from path
         return parameter.getStorageFullPath(storagePrefix) + "." + index;
+    }
+
+    @Override
+    public List<String> getKeysByParameter(String storagePrefix, Parameter parameter) {
+        return Collections.emptyList();
     }
 
     @Override
