@@ -157,7 +157,7 @@ public class DynamoDBStorageProvider implements StorageProvider {
 
     @Override
     public List<String> getKeysByParameter(String storagePrefix, Parameter parameter) {
-        LOG.info("Looking up DDB keys for param: {}", parameter);
+        LOG.info("Looking up DDB keys for param: {}", parameter.getStorageFullPath(storagePrefix));
 
         try {
             Map<String, AttributeValue> expressionValues = new HashMap<>();
@@ -170,18 +170,18 @@ public class DynamoDBStorageProvider implements StorageProvider {
                             .build()
             );
             if (!result.hasItems()){
-                LOG.warn("Couldn't find items for param: {}", parameter);
+                LOG.warn("Couldn't find items for param: {}", parameter.getStorageFullPath(storagePrefix));
                 return Collections.emptyList();
             }
             return result.items().stream().map(i -> i.get("secretName").s()).collect(Collectors.toList());
 
         } catch (ResourceNotFoundException e) {
-            LOG.warn("Couldn't find item for param: {}", parameter);
+            LOG.warn("Couldn't find item for param: {}", parameter.getStorageFullPath(storagePrefix));
             return Collections.emptyList();
 
         } catch (DynamoDbException e) {
             //had error finding value, could be missing or invalid or error
-            LOG.error("Error when looking up parameter with param: " + parameter, e);
+            LOG.error("Error when looking up parameter with param: " + parameter.getStorageFullPath(storagePrefix), e);
             throw new RuntimeException(e);
         }
     }

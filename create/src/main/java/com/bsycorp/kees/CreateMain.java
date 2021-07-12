@@ -222,17 +222,18 @@ public class CreateMain {
                 //it would be more efficient to try and maintain a list of what has been previously issued, but that risks omitting valid numbers
                 //since the range is probably small, just brute force lookups against dynamo until we get one that succeeds
                 String potentialLeaseKey = storageKeyPrefix + "." + index;
+                ResolvedLeaseParameter potentialParameter = new ResolvedLeaseParameter(
+                        parameter,
+                        potentialLeaseKey.substring(storageKeyPrefix.length() + 1)
+                );
                 //check if this potential lease is alreday taken, if so skip it.
-                if (existingLeaseKeys.contains(potentialLeaseKey)) {
+                if (existingLeaseKeys.contains(potentialParameter.getStorageFullPath(storagePrefix))) {
                     continue;
                 }
                 //reserve that value in dynamo against pod
                 leaseKey = potentialLeaseKey;
                 try {
-                    storageProvider.put(storagePrefix, new ResolvedLeaseParameter(
-                            parameter,
-                            leaseKey.substring(storageKeyPrefix.length() + 1)
-                    ), podName, false);
+                    storageProvider.put(storagePrefix, potentialParameter, podName, false);
                     LOG.info("Created lease {} for pod {} took: {}ms", leaseKey, podName, System.currentTimeMillis() - start);
                     expiringCache.put(getCacheKey(resource, parameter, storagePrefix), "success");
                     assignedLease = true;
