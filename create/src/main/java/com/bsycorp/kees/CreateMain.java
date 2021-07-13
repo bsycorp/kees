@@ -31,10 +31,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
 
 public class CreateMain {
 
     private static final Logger LOG = LoggerFactory.getLogger(CreateMain.class);
+    private static final Locker POD_LOCKER = new Locker();
 
     private KubernetesClient client;
     private StorageProvider storageProvider;
@@ -101,7 +103,9 @@ public class CreateMain {
     }
 
     private void handleEvent(Watcher.Action action, Pod resource) {
+        Lock podLock = POD_LOCKER.getLock(resource.getMetadata().getNamespace() + "-" + resource.getMetadata().getName());
         try {
+            podLock.lock();
             LOG.info("Checking pod: {} in namespace: {}", resource.getMetadata().getName(), resource.getMetadata().getNamespace());
             //get annotations from pod definition
             Map<String, String> annotations = resource.getMetadata().getAnnotations();
@@ -166,6 +170,7 @@ public class CreateMain {
 
         } finally {
             eventCounter.incrementAndGet();
+            podLock.unlock();
         }
     }
 
