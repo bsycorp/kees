@@ -28,6 +28,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class CreateMain {
@@ -43,6 +45,7 @@ public class CreateMain {
     private Watch watch = null;
     final CountDownLatch watcherLatch = new CountDownLatch(1);
     private Map<String, String> expiringCache = new PassiveExpiringMap<>(60000);
+    private ExecutorService executorService = Executors.newWorkStealingPool(50);
 
     public static void main(String... argv) throws Exception {
         setupProxyProperties();
@@ -78,72 +81,9 @@ public class CreateMain {
             public synchronized void eventReceived(Action action, Pod resource) {
                 //only try to create
                 if(action == Action.ADDED || action == Action.MODIFIED || action == Action.DELETED) {
-                    try {
-                        LOG.info("Checking pod: {} in namespace: {}", resource.getMetadata().getName(), resource.getMetadata().getNamespace());
-                        //get annotations from pod definition
-                        Map<String, String> annotations = resource.getMetadata().getAnnotations();
-                        if(annotations == null){
-                            //default to empty map to avoid NPE
-                            annotations = Collections.EMPTY_MAP;
-                        }
-
-                        //check if pod is running local mode
-                        if (isLocalMode(annotations)) {
-                            //local mode
-                            LOG.info("Pod {} in namespace: {} is in local mode, skipping.", resource.getMetadata().getName(), resource.getMetadata().getNamespace());
-                            return;
-                        }
-
-                        //otherwise is a valid pod, parse and create missing!
-                        List<Parameter> parameters = annotationParser.parseMap(annotations);
-                        String storagePrefix = annotations.get("init." + getAnnotationDomain() + "/storage-prefix");
-
-                        //if we have some matching annotations
-                        if (parameters.size() > 0 && storagePrefix != null) {
-                            LOG.info("Found {} matching annotations to process..", parameters.size());
-                            for (Parameter parameter : parameters) {
-                                try {
-                                    //handle deletes without looking at process cache
-                                    if (action == Action.DELETED && parameter instanceof LeaseParameter) {
-                                        handleLeaseParameterDelete((LeaseParameter) parameter, resource, storagePrefix);
-                                        continue;
-                                    }
-
-                                    //if we have processed this param recently then skip!
-                                    String cacheKey = getCacheKey(resource, parameter, storagePrefix);
-                                    if (expiringCache.containsKey(cacheKey)) {
-                                        LOG.info("Skipping parameter '{}' as already exists in processed cache..", cacheKey);
-                                        continue;
-                                    }
-
-                                    //otherwise process the parameter depending on the type
-                                    if (parameter instanceof LeaseParameter) {
-                                        handleLeaseParameterUpsert((LeaseParameter) parameter, resource, storagePrefix);
-
-                                    } else if (parameter instanceof ResourceParameter) {
-                                        //ignore as resources can't be generated
-
-                                    } else if (parameter instanceof SecretParameter) {
-                                        //check provider, see if it already exists, if nothing then go create..
-                                        handleSecretParameter((SecretParameter) parameter, resource, action, storagePrefix);
-
-                                    } else {
-                                        throw new RuntimeException("Unsupported parameter");
-                                    }
-
-                                } catch (Exception e) {
-                                    LOG.error("Error completing processing for annotation: " + parameter.getFullAnnotationName(), e);
-                                }
-                            }
-                        }
-
-                    } catch (Exception e) {
-                        exceptionCounter.incrementAndGet();
-                        LOG.error("Error processing event received", e);
-                        throw e;
-                    } finally {
-                        eventCounter.incrementAndGet();
-                    }
+                    executorService.submit(() -> {
+                        handleEvent(action, resource);
+                    });
                 }
             }
 
@@ -158,6 +98,75 @@ public class CreateMain {
 
         //blocking while watcher is connected
         watcherLatch.await();
+    }
+
+    private void handleEvent(Watcher.Action action, Pod resource) {
+        try {
+            LOG.info("Checking pod: {} in namespace: {}", resource.getMetadata().getName(), resource.getMetadata().getNamespace());
+            //get annotations from pod definition
+            Map<String, String> annotations = resource.getMetadata().getAnnotations();
+            if(annotations == null){
+                //default to empty map to avoid NPE
+                annotations = Collections.EMPTY_MAP;
+            }
+
+            //check if pod is running local mode
+            if (isLocalMode(annotations)) {
+                //local mode
+                LOG.info("Pod {} in namespace: {} is in local mode, skipping.", resource.getMetadata().getName(), resource.getMetadata().getNamespace());
+                return;
+            }
+
+            //otherwise is a valid pod, parse and create missing!
+            List<Parameter> parameters = annotationParser.parseMap(annotations);
+            String storagePrefix = annotations.get("init." + getAnnotationDomain() + "/storage-prefix");
+
+            //if we have some matching annotations
+            if (parameters.size() > 0 && storagePrefix != null) {
+                LOG.info("Found {} matching annotations to process..", parameters.size());
+                for (Parameter parameter : parameters) {
+                    try {
+                        //handle deletes without looking at process cache
+                        if (action == Watcher.Action.DELETED && parameter instanceof LeaseParameter) {
+                            handleLeaseParameterDelete((LeaseParameter) parameter, resource, storagePrefix);
+                            continue;
+                        }
+
+                        //if we have processed this param recently then skip!
+                        String cacheKey = getCacheKey(resource, parameter, storagePrefix);
+                        if (expiringCache.containsKey(cacheKey)) {
+                            LOG.info("Skipping parameter '{}' as already exists in processed cache..", cacheKey);
+                            continue;
+                        }
+
+                        //otherwise process the parameter depending on the type
+                        if (parameter instanceof LeaseParameter) {
+                            handleLeaseParameterUpsert((LeaseParameter) parameter, resource, storagePrefix);
+
+                        } else if (parameter instanceof ResourceParameter) {
+                            //ignore as resources can't be generated
+
+                        } else if (parameter instanceof SecretParameter) {
+                            //check provider, see if it already exists, if nothing then go create..
+                            handleSecretParameter((SecretParameter) parameter, resource, action, storagePrefix);
+
+                        } else {
+                            throw new RuntimeException("Unsupported parameter");
+                        }
+
+                    } catch (Exception e) {
+                        LOG.error("Error completing processing for annotation: " + parameter.getFullAnnotationName(), e);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            exceptionCounter.incrementAndGet();
+            LOG.error("Error processing event received", e);
+
+        } finally {
+            eventCounter.incrementAndGet();
+        }
     }
 
     private void handleSecretParameter(SecretParameter parameter, Pod resource, Watcher.Action action, String storagePrefix) {

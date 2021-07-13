@@ -13,7 +13,6 @@ import com.bsycorp.kees.storage.InMemoryStorageProvider;
 import com.bsycorp.kees.storage.StorageProvider;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
-import io.fabric8.kubernetes.api.model.WatchEvent;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import org.junit.After;
 import org.junit.Before;
@@ -28,7 +27,7 @@ import java.util.stream.IntStream;
 public class CreateMainTest {
 
     @Rule
-    public KubernetesServer server = new KubernetesServer(false);
+    public KubernetesServer server = new KubernetesServer(false, true);
 
     private static ExecutorService executorService = Executors.newFixedThreadPool(1);
 
@@ -62,10 +61,6 @@ public class CreateMainTest {
                 .endMetadata()
                 .build();
 
-        server.expect()
-                .withPath("/api/v1/pods?watch=true")
-                .andUpgradeToWebSocket().open().waitFor(500).andEmit(new WatchEvent(pod, "ADDED")).done().once();
-
         executorService.submit(() -> {
             try {
                 createMain.run();
@@ -74,6 +69,9 @@ public class CreateMainTest {
                 hadException[0] = true;
             }
         });
+
+        Thread.sleep(500);
+        server.getClient().pods().create(pod);
 
         //wait for it to process 1 event
         while(createMain.getEventCounter().get() < 1){
@@ -116,10 +114,6 @@ public class CreateMainTest {
                 .endMetadata()
                 .build();
 
-        server.expect()
-                .withPath("/api/v1/pods?watch=true")
-                .andUpgradeToWebSocket().open().waitFor(500).andEmit(new WatchEvent(pod, "ADDED")).done().once();
-
         executorService.submit(() -> {
             try {
                 createMain.run();
@@ -128,6 +122,9 @@ public class CreateMainTest {
                 hadException[0] = true;
             }
         });
+
+        Thread.sleep(500);
+        server.getClient().pods().create(pod);
 
         //wait for it to process 1 event
         while(createMain.getEventCounter().get() < 1){
@@ -197,23 +194,15 @@ public class CreateMainTest {
             }
         });
 
-        server.expect()
-                .withPath("/api/v1/pods?watch=true")
-                .andUpgradeToWebSocket().open()
-                    .waitFor(500).andEmit(new WatchEvent(pod, "MODIFIED"))
-                    .waitFor(2500).andEmit(new WatchEvent(pod, "DELETED")).done().once();
-
-        executorService.submit(() -> {
-            try {
-                createMain.run();
-            } catch (Exception e) {
-                e.printStackTrace();
-                hadException[0] = true;
-            }
-        });
+        Thread.sleep(500);
+        server.getClient().pods().create(pod);
+        Thread.sleep(500);
+        server.getClient().pods().withName(pod.getMetadata().getName()).edit().editOrNewMetadata().addToLabels("change", "label").endMetadata().done();
+        Thread.sleep(500);
+        server.getClient().pods().delete(pod);
 
         //wait for it to process 1 event
-        while(createMain.getEventCounter().get() < 1){
+        while(createMain.getEventCounter().get() < 3){
             Thread.sleep(500);
         }
 
@@ -265,10 +254,6 @@ public class CreateMainTest {
                 .endMetadata()
                 .build();
 
-        server.expect()
-                .withPath("/api/v1/pods?watch=true")
-                .andUpgradeToWebSocket().open().waitFor(500).andEmit(new WatchEvent(pod, "ADDED")).done().once();
-
         executorService.submit(() -> {
             try {
                 createMain.run();
@@ -277,6 +262,9 @@ public class CreateMainTest {
                 hadException[0] = true;
             }
         });
+
+        Thread.sleep(500);
+        server.getClient().pods().create(pod);
 
         //wait for it to process 1 event
         while(createMain.getEventCounter().get() < 1){
