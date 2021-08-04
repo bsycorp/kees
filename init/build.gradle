@@ -23,11 +23,15 @@ apply plugin: 'application'
 apply plugin: com.palantir.gradle.graal.GradleGraalPlugin
 apply plugin: com.google.gradle.osdetector.OsDetectorPlugin
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
 group = 'com.bsycorp.kees'
 if (findProperty("appVersion") != null){
     version = findProperty("appVersion")
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
 }
 
 application {

@@ -152,7 +152,15 @@ public class CreateMain {
 
                         } else if (parameter instanceof SecretParameter) {
                             //check provider, see if it already exists, if nothing then go create..
-                            handleSecretParameter((SecretParameter) parameter, resource, action, storagePrefix);
+                            Lock podSecretLock = POD_LOCKER.getLock(storagePrefix + "-" + parameter.getParameterName());
+                            try {
+                                //defend against concurrent generation of the same secret, could lead to divergent RSA public/private key parts
+                                podSecretLock.lock();
+                                handleSecretParameter((SecretParameter) parameter, resource, action, storagePrefix);
+
+                            } finally {
+                                podSecretLock.unlock();
+                            }
 
                         } else {
                             throw new RuntimeException("Unsupported parameter");

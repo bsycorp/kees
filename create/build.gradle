@@ -20,14 +20,18 @@ repositories {
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'application'
-apply plugin: com.palantir.gradle.graal.GradleGraalPlugin
-apply plugin: com.google.gradle.osdetector.OsDetectorPlugin
+//apply plugin: com.palantir.gradle.graal.GradleGraalPlugin
+//apply plugin: com.google.gradle.osdetector.OsDetectorPlugin
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
 group = 'com.bsycorp.kees'
 if (findProperty("appVersion") != null){
     version = findProperty("appVersion")
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
 }
 
 application {
@@ -45,25 +49,26 @@ dependencies {
     testCompile "io.fabric8:kubernetes-server-mock:4.12.0"
 }
 
-def nativeImageOutput = "kees-create-${osdetector.classifier}"
-graal {
-    mainClass 'com.bsycorp.kees.CreateMain'
-    outputName nativeImageOutput
-    graalVersion "20.2.0"
-    javaVersion JavaVersion.VERSION_1_8.majorVersion
-//    option '-H:+PrintMethodHistogram'
-//    option '-H:+PrintRuntimeCompileMethods'
-//    option '-H:Log=registerResource:'
-    option '-H:ReflectionConfigurationFiles=../base/src/main/resources/reflect-config.json'
-    option '-H:+AddAllCharsets'
-    option '--enable-http'
-    option '--enable-https'
-    option '--allow-incomplete-classpath'
-    option '--report-unsupported-elements-at-runtime'
-    option '--install-exit-handlers'
-    option '--no-server'
-    option '--no-fallback'
-    option '--verbose'
-    option '-J-Dfile.encoding=UTF-8'
-    option '-J-Xmx2500m' //bound memory so it is of a consistent size may need to increase over time
-}
+//Disabled until further tested
+//def nativeImageOutput = "kees-create-${osdetector.classifier}"
+//graal {
+//    mainClass 'com.bsycorp.kees.CreateMain'
+//    outputName nativeImageOutput
+//    graalVersion "20.2.0"
+//    javaVersion JavaVersion.VERSION_1_8.majorVersion
+////    option '-H:+PrintMethodHistogram'
+////    option '-H:+PrintRuntimeCompileMethods'
+////    option '-H:Log=registerResource:'
+//    option '-H:ReflectionConfigurationFiles=../base/src/main/resources/reflect-config.json'
+//    option '-H:+AddAllCharsets'
+//    option '--enable-http'
+//    option '--enable-https'
+//    option '--allow-incomplete-classpath'
+//    option '--report-unsupported-elements-at-runtime'
+//    option '--install-exit-handlers'
+//    option '--no-server'
+//    option '--no-fallback'
+//    option '--verbose'
+//    option '-J-Dfile.encoding=UTF-8'
+//    option '-J-Xmx2500m' //bound memory so it is of a consistent size may need to increase over time
+//}
