@@ -34,9 +34,23 @@ public class InitMain {
 
     public static void main(String... argv) throws Exception {
         setupProxyProperties();
-        InitMain main = new InitMain();
         try {
-            main.run();
+            try {
+                InitMain main = new InitMain();
+                main.run();
+
+            } catch (Exception e) {
+                //if configured with a retry delay, retry once more before failing, can help avoid CrashLoopBackOff and its lack of tunables
+                if (Utils.getEnvironment().get("RETRY_DELAY") != null) {
+                    int retryDelaySeconds = Integer.parseInt(Utils.getEnvironment().get("RETRY_DELAY"));
+                    Thread.sleep(retryDelaySeconds * 1000);
+
+                    InitMain main = new InitMain();
+                    main.run();
+                } else {
+                    throw e;
+                }
+            }
         } catch (Exception e) {
             LOG.error("Error in execution", e);
             throw e;
@@ -130,7 +144,7 @@ public class InitMain {
                         leaseKey = secondaryStorageProvider.getKeyByParameterAndValue(storagePrefix, parameter, podName);
                     }
                     if (leaseKey == null) {
-                        LOG.info("Couldn't find key for parameter: {}, failing..", fileKey);
+                        LOG.info("Couldn't find key for parameter: {}, failing..", leasePrefix);
                         throw new RuntimeException("Couldn't find key for parameter:" + parameter.getFullAnnotationName());
                     }
                     String leaseValue = leaseKey.substring(leasePrefix.length() + 1) ;
